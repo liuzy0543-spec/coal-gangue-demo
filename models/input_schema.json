@@ -1,0 +1,110 @@
+[
+  {
+    "key": "LOI烧失量",
+    "label": "LOI 烧失量",
+    "unit": "%",
+    "required": true,
+    "range": [
+      0,
+      60
+    ],
+    "step": 0.1,
+    "tip": "GB/T 212 马弗炉灼烧，现场可测；SiO2 的最强单指标"
+  },
+  {
+    "key": "K2O",
+    "label": "K₂O",
+    "unit": "%",
+    "required": true,
+    "range": [
+      0,
+      10
+    ],
+    "step": 0.01,
+    "tip": "伊利石/钾长石指示；进入 _den 闭合分母"
+  },
+  {
+    "key": "MgO",
+    "label": "MgO",
+    "unit": "%",
+    "required": true,
+    "range": [
+      0,
+      15
+    ],
+    "step": 0.01,
+    "tip": "白云石/绿泥石指示；CaO 的协同指标"
+  },
+  {
+    "key": "Na2O",
+    "label": "Na₂O",
+    "unit": "%",
+    "required": true,
+    "range": [
+      0,
+      10
+    ],
+    "step": 0.01,
+    "tip": "Fe2O3 的组内相关最强指标（r≈+0.39）"
+  },
+  {
+    "key": "TiO2",
+    "label": "TiO₂",
+    "unit": "%",
+    "required": true,
+    "range": [
+      0,
+      8
+    ],
+    "step": 0.01,
+    "tip": "金红石/黏土矿物指示"
+  },
+  {
+    "key": "SO3",
+    "label": "SO₃",
+    "unit": "%",
+    "required": true,
+    "range": [
+      0,
+      20
+    ],
+    "step": 0.01,
+    "tip": "石膏/硫酸盐指示；CaO 的组内 r≈+0.29"
+  },
+  {
+    "key": "高岭石",
+    "label": "高岭石定量（可选，XRD）",
+    "unit": "%",
+    "required": false,
+    "range": [
+      0,
+      100
+    ],
+    "step": 0.1,
+    "tip": "填了它，Al₂O₃ 自动切换到 XRD 条件模型（R²≈0.59）；缺失时用全表模型（R²≈0.27）"
+  },
+  {
+    "key": "伊利石",
+    "label": "伊利石定量（可选，XRD）",
+    "unit": "%",
+    "required": false,
+    "range": [
+      0,
+      100
+    ],
+    "step": 0.1,
+    "tip": "用于收紧 Al₂O₃ 矿物学上界；也进入 Fe₂O₃ 模型"
+  },
+  {
+    "key": "石英",
+    "label": "石英定量（可选，XRD）",
+    "unit": "%",
+    "required": false,
+    "range": [
+      0,
+      100
+    ],
+    "step": 0.1,
+    "tip": "Fe₂O₃ 模型使用；缺失按中位数插补"
+  }
+]

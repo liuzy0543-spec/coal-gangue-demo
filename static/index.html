@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>煤矸石智能识别 · 成分预测 · 工艺决策</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛏</text></svg>">
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">⛏</div>
+      <div>
+        <h1>煤矸石 <span>智能识别 · 成分预测 · 工艺决策</span></h1>
+        <p>Gangue Vision &amp; Process Copilot · 大创中期 Demo</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span class="chip" id="chip-device"><i class="dot"></i>设备 <b>—</b></span>
+      <span class="chip" id="chip-model"><i class="dot"></i>模型 <b>—</b></span>
+      <span class="chip" id="chip-llm"><i class="dot"></i>LLM <b>—</b></span>
+      <button class="btn sm ghost" id="btn-settings">⚙ API 设置</button>
+    </div>
+  </header>
+
+  <nav class="stepper">
+    <div class="step-tab active" data-step="1">
+      <div class="step-no">1</div>
+      <div><h3>图像识别与物理特征</h3><p>YOLOv8 检测 + 5 项 CV 特征 + 噪声/置信度</p></div>
+    </div>
+    <div class="step-tab" data-step="2">
+      <div class="step-no">2</div>
+      <div><h3>矿区信息与成分预测</h3><p>六项现场指标 → 四氧化物逐石预测</p></div>
+    </div>
+    <div class="step-tab" data-step="3">
+      <div class="step-no">3</div>
+      <div><h3>资源化工艺推荐</h3><p>知识库 + GLM-4.5-Flash 逐石工艺方案</p></div>
+    </div>
+  </nav>
+
+  <!-- ================= STEP 1 ================= -->
+  <section class="step-panel active" id="panel-1">
+    <div class="grid-2 wide-left">
+
+      <div class="card">
+        <div class="card-head">
+          <h2><span class="ic">◉</span>图像输入与识别</h2>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="sub" id="device-sub">推理设备 —</span>
+            <button class="btn sm ghost" id="btn-cases">测试集</button>
+            <button class="btn sm ghost" id="btn-examples">示例图片</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="drop" id="drop">
+            <div class="ico">🖼️</div>
+            <h4>拖入 / 点击上传一张煤矸石图片</h4>
+            <p>支持 JPG / PNG，建议俯拍、多目标、光线均匀</p>
+            <small>识别 煤块（绿）· 矸石（红）· 其他杂石（蓝，低置信度自动归入，不参与后续预测）</small>
+          </div>
+          <input type="file" id="file-input" accept="image/*" hidden>
+
+          <div id="image-box" style="display:none">
+            <div class="image-stage">
+              <span class="badge" id="image-badge">—</span>
+              <img id="result-img" alt="识别结果">
+              <div class="scanning" id="scanning" style="display:none">
+                <div style="text-align:center"><div class="ring" style="margin:0 auto"></div><p>YOLO 推理中…</p></div>
+              </div>
+            </div>
+            <div class="quality" id="quality-grid"></div>
+            <div style="display:flex;gap:9px;margin-top:12px;flex-wrap:wrap">
+              <button class="btn sm" id="btn-redetect">重新识别</button>
+              <button class="btn sm ghost" id="btn-reset">换一张图</button>
+              <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+                <span class="sub" style="font-size:11px;color:var(--dim)">conf</span>
+                <input type="range" id="conf-range" min="0.10" max="0.80" step="0.05" value="0.25" style="width:110px">
+                <span class="mono" id="conf-val" style="font-size:11px;color:var(--muted)">0.25</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="example-row" style="display:none;margin-top:14px">
+            <div class="section-label">测试集示例</div>
+            <div id="example-list" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+          </div>
+
+          <div class="notice cyan" id="case-note" style="display:none;margin-top:12px"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2><span class="ic">▤</span>逐石物理特征</h2>
+          <span class="sub" id="stone-sub">尚未识别</span>
+        </div>
+        <div class="card-body tight">
+          <div class="counts" id="counts" style="margin-bottom:12px"></div>
+          <div class="table-wrap">
+            <table id="stone-table">
+              <thead>
+                <tr>
+                  <th title="按检测框从上到下、从左到右编号">编号</th>
+                  <th>类别</th>
+                  <th title="按测试集同类置信度分布估算的 90% 区间">置信度（90% 区间）</th>
+                  <th title="框面积占全图百分比">粒径</th>
+                  <th title="框内灰度均值">明度</th>
+                  <th title="高光像素占比">光泽</th>
+                  <th title="灰度梯度均值">粗糙度</th>
+                  <th title="框长边 / 短边">形状</th>
+                </tr>
+              </thead>
+              <tbody id="stone-body">
+                <tr><td colspan="8"><div class="empty" style="min-height:180px;border:0"><div class="big">🪨</div>上传图片后，这里按「石头编号 → 物理特征」逐行列出</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:11px;font-size:10.5px;color:var(--dim)">
+            <span>特征口径：L 明度 · G 光泽 · T 纹理 · S 长宽比 · D 相对粒径（阈值取自 2263 个标注框实测分位）</span>
+            <span id="rule-note"></span>
+          </div>
+          <div style="margin-top:5px;font-size:10px;color:var(--dim);line-height:1.8">
+            <b style="color:#8b9bb4">档位释义</b>：
+            D1 细小 · D2 中粒 · D3 粗粒 · D4 大块 ｜
+            L1 深黑 · L2 深灰 · L3 灰 · L4 浅灰/白矸 ｜
+            G0 土状 · G1 弱光泽 · G2 明显光泽 ｜
+            T1 细腻 · T2 中等 · T3 粗糙 ｜
+            S1 近等轴 · S2 次棱角 · S3 片状长条
+            <span style="color:#7dd3fc">（CV 档位可点编号旁 ✎ 修正）</span>
+          </div>
+          <div class="notice cyan" style="margin-top:11px">
+            <span>ⓘ</span><span>图像只用于<b>识别类别与读出物理特征</b>，不用于反演化学成分；低置信度矸石按规则归入“其他杂石”，不进入第二、三步。</span>
+          </div>
+          <div class="notice" style="margin-top:8px">
+            <span>▸</span><span><b>读表提示</b>：置信区间越窄越稳；D 偏大块 → 骨料/充填，T 越细腻 → 烧结砖/陶瓷；明度受煤粉与现场照度干扰，只作辅助。</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= STEP 2 ================= -->
+  <section class="step-panel" id="panel-2">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head">
+          <h2><span class="ic">▣</span>矿区信息与现场可测指标</h2>
+          <span class="sub">GB/T 212 马弗炉 + XRF 可测</span>
+        </div>
+        <div class="card-body">
+          <div class="demo-banner" id="demo-banner" style="display:none">
+            <div class="demo-head">
+              <b id="demo-kind">📋 默认示例</b><span id="demo-title" class="mono"></span>
+              <button class="btn sm ghost" id="btn-error-view" style="margin-left:auto">预测误差</button>
+              <button class="btn sm ghost" id="btn-demo-reset">恢复默认</button>
+            </div>
+            <div class="demo-values" id="demo-values"></div>
+          </div>
+
+          <div class="field">
+            <label><span><b>矿区 / 煤田</b><span class="req">*</span></span><span class="hint">先保留山西省内选项</span></label>
+            <div style="display:flex;gap:8px">
+              <select id="area-select" style="flex:1"></select>
+              <button class="btn sm" id="btn-add-area" title="新增矿区">＋</button>
+            </div>
+            <div class="hint" id="area-hint">—</div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label><b>矸石来源类型</b></label>
+              <select id="source-type">
+                <option value="煤矸石">煤矸石（未细分）</option>
+                <option value="洗选矸石">洗选矸石</option>
+                <option value="掘进矸石">掘进矸石</option>
+                <option value="高铝煤矸石">高铝煤矸石</option>
+                <option value="混合/未说明">混合 / 未说明</option>
+              </select>
+            </div>
+            <div class="field">
+              <label><b>物料阶段</b></label>
+              <select id="stage">
+                <option value="RAW_OR_UNSPECIFIED_GANGUE">原矸 / 未说明</option>
+                <option value="WASHED_GANGUE">洗选后</option>
+                <option value="crushed_gangue">破碎后</option>
+                <option value="ground_gangue">磨细后</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="section-label">六项特殊指标（模型输入）</div>
+          <div id="indicator-fields" class="field-row"></div>
+          <details class="xrd-details">
+            <summary>XRD 可选定量（高岭石 / 伊利石 / 石英）<span>填高岭石 → Al₂O₃ R² 0.27→0.59</span></summary>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px">
+              <div class="field">
+                <label><b>高岭石</b><span class="hint">切 Al₂O₃ 条件模型</span></label>
+                <div class="input-unit"><input type="number" id="in-高岭石" step="0.1" min="0" max="100" placeholder="留空用全表"><span class="unit">%</span></div>
+              </div>
+              <div class="field">
+                <label><b>伊利石</b><span class="hint">收紧上界</span></label>
+                <div class="input-unit"><input type="number" id="in-伊利石" step="0.1" min="0" max="100" placeholder="留空按 0"><span class="unit">%</span></div>
+              </div>
+              <div class="field">
+                <label><b>石英</b><span class="hint">Fe₂O₃ 模型</span></label>
+                <div class="input-unit"><input type="number" id="in-石英" step="0.1" min="0" max="100" placeholder="留空按中位数"><span class="unit">%</span></div>
+              </div>
+            </div>
+          </details>
+
+          <div style="display:flex;gap:9px;margin-top:16px">
+            <button class="btn primary" id="btn-predict" style="flex:1">⚡ 开始成分预测</button>
+            <button class="btn ghost sm" id="btn-fill-demo">填入示例值</button>
+          </div>
+
+          <div class="model-grid" id="model-grid"></div>
+          <div class="notice" style="margin-top:12px">
+            <span>⚠</span><span>R² 为<b>按来源组 5 折 × 3 个分组种子</b>的交叉验证均值。Al₂O₃ / Fe₂O₃ / CaO 目前属于“可用但偏弱”，预测值请结合区间阅读；SiO₂ 已通过三种子 &gt; 0.70 验收。</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2><span class="ic">◇</span>成分预测 · 石头编号 → 氧化物</h2>
+          <span class="sub" id="pred-sub">等待预测</span>
+        </div>
+        <div class="card-body tight">
+          <div id="pred-result">
+            <div class="pred-empty"><div class="big">⚗</div>填写左侧指标并点击「开始成分预测」<br>结果将按每块矸石给出 SiO₂ / Al₂O₃ / Fe₂O₃ / CaO</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= STEP 3 ================= -->
+  <section class="step-panel" id="panel-3">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head">
+          <h2><span class="ic">✦</span>工艺推荐控制台</h2>
+          <span class="sub" id="llm-sub">—</span>
+        </div>
+        <div class="card-body">
+          <div class="notice green" id="step3-ready" style="margin-bottom:12px">
+            <span>✓</span><span id="step3-ready-text">请先完成第二步成分预测。</span>
+          </div>
+          <button class="btn primary block" id="btn-recommend" disabled>🧠 生成逐石工艺方案</button>
+          <div style="display:flex;gap:8px;margin-top:9px">
+            <button class="btn sm ghost" id="btn-llm-config" style="flex:1">配置 / 测试 API</button>
+            <button class="btn sm ghost" id="btn-kb-view" style="flex:1">查看知识库</button>
+          </div>
+
+          <div class="section-label">本次决策上下文</div>
+          <div id="context-box" style="font-size:12px;color:var(--muted);line-height:1.9">—</div>
+
+          <div class="section-label">推荐依据（知识库命中）</div>
+          <div id="kb-hits" style="font-size:11.5px;color:var(--dim)">生成方案后显示逐石命中的知识库条目。</div>
+
+          <div class="notice cyan" style="margin-top:14px">
+            <span>ⓘ</span><span>API Key 只保存在本机 <code>config.json</code>；未配置时自动切换<b>离线知识库</b>，demo 仍可完整跑通。</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2><span class="ic">▤</span>石头编号 → 处理工艺</h2>
+          <span class="sub" id="rec-sub">尚未生成</span>
+        </div>
+        <div class="card-body">
+          <div id="rec-result">
+            <div class="empty"><div class="big">🏭</div>完成成分预测后生成工艺方案<br>每块矸石给出主推工艺、备选、产品与风险提示</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <span>数据与模型：D:\项目\煤矸石识别（YOLOv8s，2 类自训） · E:\项目\煤矸石（四成分主表 v35 / SiO₂ 交付包）</span>
+    <span>本页面为科研 demo，预测值不替代化验与中试验证</span>
+  </footer>
+</div>
+
+<!-- ============ 测试集弹窗 ============ -->
+<div class="modal-mask" id="modal-cases">
+  <div class="modal" style="width:min(900px,100%)">
+    <div class="modal-head"><h3>🧪 测试集 · 三张图片 + 三组含 LOI 的实测数据</h3><button class="icon-btn" data-close="modal-cases">×</button></div>
+    <div class="modal-body">
+      <div class="notice" id="cases-note" style="margin-bottom:10px"></div>
+      <div id="case-list" style="display:grid;gap:10px">加载中…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 修正物理特征弹窗 ============ -->
+<div class="modal-mask" id="modal-feature">
+  <div class="modal">
+    <div class="modal-head"><h3>✎ 修正物理特征 <span id="feat-stone-id" class="mono" style="color:#7dd3fc"></span></h3><button class="icon-btn" data-close="modal-feature">×</button></div>
+    <div class="modal-body">
+      <div class="notice" style="margin-bottom:11px"><span>ⓘ</span><span>默认是 CV 实测档位，可按现场经验修正。修正<b>只影响工艺可行性排序</b>（如大块→骨料、细腻→陶瓷），不会改变化学成分预测。</span></div>
+      <div id="feature-fields" class="field-row"></div>
+      <div id="feature-measured" class="notice cyan" style="margin-top:2px"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="btn-feat-reset">恢复 CV 值</button>
+      <button class="btn ghost" data-close="modal-feature">取消</button>
+      <button class="btn primary" id="btn-feat-save">保存修正</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 设置弹窗 ============ -->
+<div class="modal-mask" id="modal-settings">
+  <div class="modal">
+    <div class="modal-head"><h3>⚙ 大模型 API 设置</h3><button class="icon-btn" data-close="modal-settings">×</button></div>
+    <div class="modal-body">
+      <div class="field">
+        <label><b>服务商预设</b></label>
+        <select id="cfg-provider">
+          <option value="zhipu">智谱 BigModel · 通用（免费 glm-4.5-flash）</option>
+          <option value="zhipu_coding">智谱 BigModel · Coding Plan（OpenAI 端点）</option>
+          <option value="zhipu_anthropic">智谱 BigModel · Coding Plan（Anthropic 端点）</option>
+          <option value="zai">Z.ai · Coding Plan（OpenAI 端点）</option>
+          <option value="zai_anthropic">Z.ai · Coding Plan（Anthropic 端点）</option>
+          <option value="zcode_plan">ZCode 编程套餐（zcode.z.ai · Anthropic）</option>
+          <option value="custom">自定义（兼容 OpenAI / Anthropic）</option>
+        </select>
+      </div>
+      <div class="field">
+        <label><b>接口协议</b><span class="hint">按端点的实际协议选择</span></label>
+        <select id="cfg-protocol">
+          <option value="openai">OpenAI 兼容（/chat/completions）</option>
+          <option value="anthropic">Anthropic 兼容（/v1/messages）</option>
+        </select>
+      </div>
+      <div class="field">
+        <label><b>Base URL</b></label>
+        <input id="cfg-base" placeholder="https://open.bigmodel.cn/api/paas/v4">
+      </div>
+      <div class="field">
+        <label><b>模型名</b><span class="hint">默认免费 glm-4.5-flash</span></label>
+        <input id="cfg-model" placeholder="glm-4.5-flash">
+      </div>
+      <div class="field">
+        <label><b>API Key</b><span class="hint">仅写入本机 config.json</span></label>
+        <input id="cfg-key" type="password" placeholder="粘贴你的 API Key">
+      </div>
+      <div id="cfg-status" class="notice cyan" style="margin-top:4px"><span>ⓘ</span><span>未配置时使用离线知识库。</span></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="btn-test-llm">测试连通</button>
+      <button class="btn primary" id="btn-save-cfg">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 新增矿区弹窗 ============ -->
+<div class="modal-mask" id="modal-area">
+  <div class="modal">
+    <div class="modal-head"><h3>＋ 新增矿区</h3><button class="icon-btn" data-close="modal-area">×</button></div>
+    <div class="modal-body">
+      <div class="field"><label><b>矿区 / 煤田名称</b><span class="req">*</span></label><input id="area-name" placeholder="例如：大同煤田某矿"></div>
+      <div class="field-row">
+        <div class="field"><label><b>省份</b></label><input id="area-province" value="山西"></div>
+        <div class="field"><label><b>城市</b></label><input id="area-city" placeholder="例如：大同"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label><b>所属煤田</b></label><input id="area-coalfield" placeholder="例如：大同煤田"></div>
+        <div class="field"><label><b>煤种</b></label><input id="area-coal-type" placeholder="例如：弱黏煤"></div>
+      </div>
+      <div class="field"><label><b>备注</b></label><textarea id="area-note" rows="2" placeholder="岩性、硫分、开采方式等"></textarea></div>
+      <div class="notice cyan"><span>ⓘ</span><span>新增矿区会写入 kb/mining_areas.json，下次启动仍在。</span></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" data-close="modal-area">取消</button>
+      <button class="btn primary" id="btn-save-area">保存矿区</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 知识库弹窗 ============ -->
+<div class="modal-mask" id="modal-kb">
+  <div class="modal" style="width:min(1040px,100%)">
+    <div class="modal-head"><h3>📚 工艺知识库 <span id="kb-count" class="mono" style="font-size:11px;color:var(--dim)"></span></h3><button class="icon-btn" data-close="modal-kb">×</button></div>
+    <div class="modal-body" id="kb-body">加载中…</div>
+  </div>
+</div>
+
+<!-- ============ 预测误差弹窗 ============ -->
+<div class="modal-mask" id="modal-error">
+  <div class="modal" style="width:min(700px,100%)">
+    <div class="modal-head"><h3>📏 预测误差 <span id="error-title" class="mono" style="font-size:11px;color:var(--dim)"></span></h3><button class="icon-btn" data-close="modal-error">×</button></div>
+    <div class="modal-body" id="error-body">加载中…</div>
+    <div class="modal-foot">
+      <span style="margin-right:auto;font-size:10px;color:var(--dim)">误差 = |预测值 − 真实值| / 真实值 × 100%</span>
+      <button class="btn ghost" data-close="modal-error">知道了</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

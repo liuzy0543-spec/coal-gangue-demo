@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Local config / secrets
+config.json
+.env
+.env.*
+
+# Runtime uploads / annotated images (screenshots are tracked)
+outputs/uploads/*
+outputs/annotated/*
+!outputs/uploads/.gitkeep
+!outputs/annotated/.gitkeep
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.log

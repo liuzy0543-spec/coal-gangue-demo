@@ -1,0 +1,90 @@
+{
+  "version": "2026-10-22",
+  "note": "三份测试集：图像来自煤矸石识别项目的测试集，化验值来自 261 行成分建模表（均含 LOI 与六项指标）；二者是演示配对，不是同一块样品。第一步的物理特征是 CV 读数，可在表格中点击 ✎ 人工修正（只影响工艺可行性排序，不改变化学预测）。",
+  "cases": [
+    {
+      "id": "A",
+      "title": "案例 A · 低烧失量 · 高硅",
+      "sample_id": "MDL-0327",
+      "city": "晋中",
+      "area_id": "jz_ls",
+      "image": "images/case_a.jpg",
+      "source_type": "煤矸石",
+      "stage": "RAW_OR_UNSPECIFIED_GANGUE",
+      "image_note": "原图 5 个目标 / 3 块矸石",
+      "inputs": {
+        "LOI烧失量": 8.46,
+        "K2O": 1.78,
+        "MgO": 0.96,
+        "Na2O": 0.56,
+        "TiO2": 0.84,
+        "SO3": 0.51,
+        "高岭石": null
+      },
+      "measured": {
+        "SiO2": 61.5,
+        "Al2O3": 18.66,
+        "Fe2O3": 5.74,
+        "CaO": 0.28
+      },
+      "expected": "水泥混合材 / 烧结砖 / 骨料与充填",
+      "story": "低烧失量、高硅、含铁中等，典型黏土-砂质矸石；烧失量低意味着有机质少、烧结收缩小，适合建材方向。"
+    },
+    {
+      "id": "B",
+      "title": "案例 B · 极高烧失量 · 低硅（炭质）",
+      "sample_id": "MDL-0323",
+      "city": "晋城",
+      "area_id": "qs_mt",
+      "image": "images/case_b.jpg",
+      "source_type": "煤矸石",
+      "stage": "RAW_OR_UNSPECIFIED_GANGUE",
+      "image_note": "原图 6 个目标 / 4 块矸石",
+      "inputs": {
+        "LOI烧失量": 52.58,
+        "K2O": 0.45,
+        "MgO": 0.55,
+        "Na2O": 0.32,
+        "TiO2": 0.29,
+        "SO3": 0.17,
+        "高岭石": null
+      },
+      "measured": {
+        "SiO2": 20.9,
+        "Al2O3": 16.3,
+        "Fe2O3": 1.35,
+        "CaO": 2.82
+      },
+      "expected": "低热值燃料 / 循环流化床发电；烧结砖需配料",
+      "story": "烧失量 52.6%、SiO₂ 仅 20.9%，接近煤矸石中的炭质/可燃组分；SiO₂ 模型这一例跟得较准（20.9→18.6），适合演示“高 LOI → 能源路线”。"
+    },
+    {
+      "id": "C",
+      "title": "案例 C · 中低烧失量 · 高硅 · 多粗块",
+      "sample_id": "MDL-0314",
+      "city": "晋中",
+      "area_id": "jz_ls",
+      "image": "images/case_c.jpg",
+      "source_type": "煤矸石",
+      "stage": "RAW_OR_UNSPECIFIED_GANGUE",
+      "image_note": "原图 12 个目标 / 5 块矸石",
+      "inputs": {
+        "LOI烧失量": 12.0,
+        "K2O": 1.46,
+        "MgO": 0.42,
+        "Na2O": 0.42,
+        "TiO2": 0.88,
+        "SO3": 0.16,
+        "高岭石": null
+      },
+      "measured": {
+        "SiO2": 55.68,
+        "Al2O3": 26.61,
+        "Fe2O3": 1.82,
+        "CaO": 0.39
+      },
+      "expected": "水泥混合材 / 骨料与充填（逐块 D 差异会改变主推）",
+      "story": "成分与 A 接近，但这张图里粗块更多：同一批化学成分下，D3/D4 的石头会被推向骨料/充填，D1/D2 仍走水泥——正好演示物理特征如何影响工艺排序（可点 ✎ 改 D 观察变化）。"
+    }
+  ]
+}

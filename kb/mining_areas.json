@@ -1,0 +1,177 @@
+{
+  "version": "2026-10-22",
+  "note": "山西省内主要煤田/矿区（下拉默认项）。可在页面「+ 新增矿区」追加，追加项直接写入本文件，后续复用。",
+  "areas": [
+    {
+      "id": "dt_mt",
+      "name": "大同煤田",
+      "province": "山西",
+      "city": "大同",
+      "coalfield": "大同煤田",
+      "coal_type": "侏罗纪弱黏煤/不黏煤",
+      "note": "低硫低灰，矸石以砂岩、泥岩为主"
+    },
+    {
+      "id": "ps_mq",
+      "name": "平朔矿区",
+      "province": "山西",
+      "city": "朔州",
+      "coalfield": "宁武煤田",
+      "coal_type": "气煤/长焰煤",
+      "note": "安太堡、安家岭等大型露天矿"
+    },
+    {
+      "id": "nw_mt",
+      "name": "宁武煤田",
+      "province": "山西",
+      "city": "忻州",
+      "coalfield": "宁武煤田",
+      "coal_type": "气煤/弱黏煤",
+      "note": "轩岗、芦子沟一带"
+    },
+    {
+      "id": "xsh_mt",
+      "name": "西山煤田",
+      "province": "山西",
+      "city": "太原",
+      "coalfield": "西山煤田",
+      "coal_type": "焦煤/瘦煤",
+      "note": "古交、马兰等矿区"
+    },
+    {
+      "id": "jz_ls",
+      "name": "灵石矿区（晋中）",
+      "province": "山西",
+      "city": "晋中",
+      "coalfield": "霍西煤田",
+      "coal_type": "焦煤/肥煤",
+      "note": "灵石、介休一带，霍西煤田北段"
+    },
+    {
+      "id": "hd_mt",
+      "name": "河东煤田",
+      "province": "山西",
+      "city": "吕梁",
+      "coalfield": "河东煤田",
+      "coal_type": "焦煤/瘦煤/贫煤",
+      "note": "离石、柳林、乡宁一带，高硫区域较多"
+    },
+    {
+      "id": "hx_mt",
+      "name": "霍西煤田",
+      "province": "山西",
+      "city": "临汾",
+      "coalfield": "霍西煤田",
+      "coal_type": "焦煤/肥煤",
+      "note": "霍州、汾西、灵石；方解石脉发育"
+    },
+    {
+      "id": "qs_mt",
+      "name": "沁水煤田",
+      "province": "山西",
+      "city": "晋城",
+      "coalfield": "沁水煤田",
+      "coal_type": "无烟煤/贫煤",
+      "note": "晋城、潞安、阳泉，煤层气富集"
+    },
+    {
+      "id": "xn_mt",
+      "name": "乡宁煤田",
+      "province": "山西",
+      "city": "临汾",
+      "coalfield": "乡宁煤田",
+      "coal_type": "焦煤/瘦煤",
+      "note": "乡宁、蒲县一带"
+    },
+    {
+      "id": "jc_mq",
+      "name": "晋城矿区",
+      "province": "山西",
+      "city": "晋城",
+      "coalfield": "沁水煤田",
+      "coal_type": "无烟煤",
+      "note": "寺河、成庄等矿井"
+    },
+    {
+      "id": "la_mq",
+      "name": "潞安矿区",
+      "province": "山西",
+      "city": "长治",
+      "coalfield": "沁水煤田",
+      "coal_type": "贫煤/无烟煤",
+      "note": "常村、漳村等矿井"
+    },
+    {
+      "id": "yq_mq",
+      "name": "阳泉矿区",
+      "province": "山西",
+      "city": "阳泉",
+      "coalfield": "沁水煤田",
+      "coal_type": "无烟煤",
+      "note": "高变质程度，矸石多为黑色炭质页岩"
+    },
+    {
+      "id": "fx_mq",
+      "name": "汾西矿区",
+      "province": "山西",
+      "city": "临汾",
+      "coalfield": "霍西煤田",
+      "coal_type": "焦煤/肥煤",
+      "note": "介休、灵石一带"
+    },
+    {
+      "id": "hz_mq",
+      "name": "霍州矿区",
+      "province": "山西",
+      "city": "临汾",
+      "coalfield": "霍西煤田",
+      "coal_type": "肥煤/焦煤",
+      "note": "辛置、白龙等矿井"
+    },
+    {
+      "id": "ls_mq",
+      "name": "离石矿区",
+      "province": "山西",
+      "city": "吕梁",
+      "coalfield": "河东煤田",
+      "coal_type": "焦煤/瘦煤",
+      "note": "离石、中阳一带"
+    },
+    {
+      "id": "ll_mq",
+      "name": "柳林矿区",
+      "province": "山西",
+      "city": "吕梁",
+      "coalfield": "河东煤田",
+      "coal_type": "焦煤/瘦煤",
+      "note": "高硫焦煤为主"
+    },
+    {
+      "id": "xg_mq",
+      "name": "轩岗矿区",
+      "province": "山西",
+      "city": "忻州",
+      "coalfield": "宁武煤田",
+      "coal_type": "气煤/弱黏煤",
+      "note": "宁武县境内"
+    },
+    {
+      "id": "sn_mq",
+      "name": "朔南矿区",
+      "province": "山西",
+      "city": "朔州",
+      "coalfield": "宁武煤田",
+      "coal_type": "长焰煤/气煤",
+      "note": "朔城区南部"
+    },
+    {
+      "id": "lf_mq",
+      "name": "灵石矿区",
+      "province": "山西",
+      "city": "晋中",
+      "coalfield": "霍西煤田",
+      "coal_type": "焦煤/肥煤",
+      "note": "晋中灵石县"
+    }
+  ]
+}

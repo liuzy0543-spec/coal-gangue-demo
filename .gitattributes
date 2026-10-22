@@ -1,0 +1,15 @@
+* text=auto
+*.bat -text
+*.cmd -text
+*.py text eol=lf
+*.js text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.xlsx binary
+*.pt binary
+*.joblib binary
+*.png binary
+*.jpg binary
+*.jpeg binary
