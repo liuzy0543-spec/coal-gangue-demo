@@ -142,7 +142,11 @@ function fillDemo() {
   $("#in-石英").value = "";
   S.demoActive = false;
   S.reference = null;
-  $("#demo-banner").style.display = "none";
+  $("#demo-banner").style.display = "";
+  $("#demo-kind").textContent = "✏ 自定义示例";
+  $("#demo-title").textContent = "手动填入，非数据库行";
+  $("#demo-values").textContent = "未绑定实测值；需要误差对比请点「恢复默认」";
+  $("#btn-error-view").style.display = "none";
   resetStep2();
   toast("已填入一组山西黏土质矸石示例值", "ok");
 }
@@ -170,6 +174,7 @@ function renderReferenceBanner(kind, title, measured) {
   $("#demo-banner").style.display = "";
   $("#demo-kind").textContent = kind;
   $("#demo-title").textContent = title;
+  $("#btn-error-view").style.display = "";
   $("#demo-values").innerHTML =
     `LOI <b style="color:#cbd5e1">${fmt(m.LOI烧失量, 2)}</b> · ` +
     `SiO₂ <b style="color:#cbd5e1">${fmt(m.SiO2, 2)}</b> · ` +
