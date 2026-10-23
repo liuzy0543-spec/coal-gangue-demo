@@ -33,7 +33,7 @@
     </div>
     <div class="step-tab" data-step="2">
       <div class="step-no">2</div>
-      <div><h3>矿区信息与成分预测</h3><p>六项现场指标 → 四氧化物逐石预测</p></div>
+      <div><h3>矿区信息与成分预测</h3><p>逐石六项指标 → 四氧化物独立预测</p></div>
     </div>
     <div class="step-tab" data-step="3">
       <div class="step-no">3</div>
@@ -118,6 +118,9 @@
               </tbody>
             </table>
           </div>
+          <div class="notice cyan" id="link-note" style="margin-top:10px;display:none">
+            <span>🔗</span><span id="link-note-text"></span>
+          </div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:11px;font-size:10.5px;color:var(--dim)">
             <span>特征口径：L 明度 · G 光泽 · T 纹理 · S 长宽比 · D 相对粒径（阈值取自 2263 个标注框实测分位）</span>
             <span id="rule-note"></span>
@@ -151,15 +154,6 @@
           <span class="sub">GB/T 212 马弗炉 + XRF 可测</span>
         </div>
         <div class="card-body">
-          <div class="demo-banner" id="demo-banner" style="display:none">
-            <div class="demo-head">
-              <b id="demo-kind">📋 默认示例</b><span id="demo-title" class="mono"></span>
-              <button class="btn sm ghost" id="btn-error-view" style="margin-left:auto">预测误差</button>
-              <button class="btn sm ghost" id="btn-demo-reset">恢复默认</button>
-            </div>
-            <div class="demo-values" id="demo-values"></div>
-          </div>
-
           <div class="field">
             <label><span><b>矿区 / 煤田</b><span class="req">*</span></span><span class="hint">先保留山西省内选项</span></label>
             <div style="display:flex;gap:8px">
@@ -191,29 +185,19 @@
             </div>
           </div>
 
-          <div class="section-label">六项特殊指标（模型输入）</div>
-          <div id="indicator-fields" class="field-row"></div>
-          <details class="xrd-details">
-            <summary>XRD 可选定量（高岭石 / 伊利石 / 石英）<span>填高岭石 → Al₂O₃ R² 0.27→0.59</span></summary>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px">
-              <div class="field">
-                <label><b>高岭石</b><span class="hint">切 Al₂O₃ 条件模型</span></label>
-                <div class="input-unit"><input type="number" id="in-高岭石" step="0.1" min="0" max="100" placeholder="留空用全表"><span class="unit">%</span></div>
-              </div>
-              <div class="field">
-                <label><b>伊利石</b><span class="hint">收紧上界</span></label>
-                <div class="input-unit"><input type="number" id="in-伊利石" step="0.1" min="0" max="100" placeholder="留空按 0"><span class="unit">%</span></div>
-              </div>
-              <div class="field">
-                <label><b>石英</b><span class="hint">Fe₂O₃ 模型</span></label>
-                <div class="input-unit"><input type="number" id="in-石英" step="0.1" min="0" max="100" placeholder="留空按中位数"><span class="unit">%</span></div>
-              </div>
-            </div>
-          </details>
+          <div class="notice cyan" id="stone-link-note" style="margin-top:12px">
+            <span>🔗</span><span id="stone-link-text">先完成第一步图像识别；第二步会按识别到的矸石数量自动生成逐石输入框，并带入 D/L/G/T/S 物理特征。</span>
+          </div>
 
-          <div style="display:flex;gap:9px;margin-top:16px">
-            <button class="btn primary" id="btn-predict" style="flex:1">⚡ 开始成分预测</button>
-            <button class="btn ghost sm" id="btn-fill-demo">填入示例值</button>
+          <div class="section-label">逐石现场指标（数量 = 第一步矸石数）</div>
+          <div id="stone-input-list" class="stone-input-list">
+            <div class="pred-empty" style="min-height:150px"><div class="big">🪨</div>请先在第一步上传图片并识别，或载入「测试集」</div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+            <button class="btn primary" id="btn-predict" style="flex:1;min-width:190px">⚡ 逐石成分预测</button>
+            <button class="btn ghost sm" id="btn-show-errors" style="min-width:112px">📏 查看误差</button>
+            <button class="btn ghost sm" id="btn-reset-stones" style="min-width:112px">恢复逐石默认</button>
           </div>
 
           <div class="model-grid" id="model-grid"></div>
@@ -230,7 +214,7 @@
         </div>
         <div class="card-body tight">
           <div id="pred-result">
-            <div class="pred-empty"><div class="big">⚗</div>填写左侧指标并点击「开始成分预测」<br>结果将按每块矸石给出 SiO₂ / Al₂O₃ / Fe₂O₃ / CaO</div>
+            <div class="pred-empty"><div class="big">⚗</div>左侧每块矸石都有独立输入；点击「逐石成分预测」后<br>按 S01/S02… 分别给出 SiO₂ / Al₂O₃ / Fe₂O₃ / CaO 与区间</div>
           </div>
         </div>
       </div>

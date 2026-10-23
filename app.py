@@ -52,6 +52,7 @@ METRICS_PATH = MODELS / "metrics.json"
 SCHEMA_PATH = MODELS / "input_schema.json"
 DATA_DIR = ROOT / "data"
 DEMO_PATH = DATA_DIR / "demo_sample.json"
+DEMO_SAMPLES_PATH = DATA_DIR / "demo_samples.json"
 AREAS_PATH = KB_DIR / "mining_areas.json"
 PROCESS_KB_PATH = KB_DIR / "process_kb.json"
 CONFIG_PATH = ROOT / "config.json"
@@ -442,27 +443,51 @@ def predict_values(row: Dict) -> Dict:
 
 
 def predict_for_stones(payload: Dict) -> Dict:
-    inputs = payload.get("inputs") or {}
+    default_inputs = payload.get("inputs") or {}
     area = payload.get("area") or {}
     source_type = payload.get("source_type") or "煤矸石"
     stage = payload.get("stage") or "RAW_OR_UNSPECIFIED_GANGUE"
     stones = payload.get("stones") or []
     quality = payload.get("quality") or {}
 
-    loi = _num(inputs.get("LOI烧失量"))
-    if loi is None:
-        return {"ok": False, "error": "请至少填写 LOI 烧失量（马弗炉可测的必需指标）"}
-
-    row = build_row(inputs, area, source_type, stage)
-    base = predict_values(row)
+    def _inputs_for(s: Dict) -> Dict:
+        raw = s.get("inputs")
+        if isinstance(raw, dict) and raw:
+            merged = dict(default_inputs)
+            merged.update(raw)
+            return merged
+        return dict(default_inputs)
 
     sharp = float(quality.get("sharpness") or 0.0015)
     sharp_norm = float(np.clip(sharp / 0.002, 0, 1))
     low = rock_low_conf()
     rows = []
-    for s in stones:
-        if s.get("cls") != ROCK_CLS:
-            continue
+
+    rock_stones = [s for s in stones if s.get("cls") == ROCK_CLS]
+    if not rock_stones:
+        loi = _num(default_inputs.get("LOI烧失量"))
+        if loi is None:
+            return {"ok": False, "error": "请至少填写 LOI 烧失量（马弗炉可测的必需指标）"}
+        row = build_row(default_inputs, area, source_type, stage)
+        base = predict_values(row)
+        return {
+            "ok": True,
+            "area": area, "source_type": source_type, "stage": stage,
+            "inputs": default_inputs,
+            "den": round(float(row["_den闭合分母"]), 2)
+            if np.isfinite(row["_den闭合分母"]) else None,
+            "base": base, "rows": [],
+            "metrics": app_state.get("metrics", {}),
+            "note": "没有可参与预测的矸石；图像只用于识别与物理特征。",
+        }
+
+    for s in rock_stones:
+        inputs = _inputs_for(s)
+        loi = _num(inputs.get("LOI烧失量"))
+        if loi is None:
+            return {"ok": False, "error": f"{s.get('id', '矸石')} 缺少 LOI 烧失量"}
+        row = build_row(inputs, area, source_type, stage)
+        base = predict_values(row)
         conf = float(s.get("conf") or 0)
         conf_norm = float(np.clip((conf - low) / max(1e-6, 0.95 - low), 0, 1))
         factor = (0.90 + 0.50 * (1 - conf_norm)) * (1 + 0.30 * (1 - sharp_norm))
@@ -476,23 +501,29 @@ def predict_for_stones(payload: Dict) -> Dict:
                 "hi": round(min(100.0, info["value"] + half), 2),
                 "r2": info.get("r2"),
                 "rmse": info.get("rmse"),
+                "mae": info.get("mae"),
                 "conditional": info.get("conditional"),
             }
         rows.append({
-            "id": s["id"], "cls_name": s["cls_name"], "conf": conf,
-            "feature": s.get("feature"), "pred": preds,
+            "id": s["id"], "cls_name": s.get("cls_name"), "conf": conf,
+            "feature": s.get("feature"), "inputs": inputs,
+            "den": round(float(row["_den闭合分母"]), 2)
+            if np.isfinite(row["_den闭合分母"]) else None,
+            "pred": preds, "base": base,
         })
 
+    first = rows[0] if rows else None
     return {
         "ok": True,
         "area": area, "source_type": source_type, "stage": stage,
-        "inputs": inputs, "den": round(float(row["_den闭合分母"]), 2)
-        if np.isfinite(row["_den闭合分母"]) else None,
-        "base": base, "rows": rows,
+        "inputs": first["inputs"] if first else default_inputs,
+        "den": first["den"] if first else None,
+        "base": first["base"] if first else {},
+        "rows": rows,
+        "per_stone": True,
         "metrics": app_state.get("metrics", {}),
-        "note": "同一图像内各矸石共享同一批次成分输入，因此中心预测值相同；"
-                "逐石差异体现在置信区间宽度（由检测置信度与图像清晰度决定）。"
-                "图像只用于识别与物理特征，不用于反演化学成分。",
+        "note": "每块矸石使用各自的现场指标独立预测，因此中心值和误差可以不同；"
+                "图像只用于识别类别与物理特征，不用于反演化学成分。",
     }
 
 
@@ -504,81 +535,169 @@ def load_process_kb() -> List[Dict]:
     return d.get("entries", [])
 
 
-def score_entry(entry: Dict, preds: Dict) -> Tuple[float, List[str]]:
-    conds = entry.get("conditions", {})
-    if not conds:
+RATIO_LABELS = {
+    "SI_AL": "SiO₂/Al₂O₃", "AL_SI": "Al₂O₃/SiO₂",
+    "FE_AL": "Fe₂O₃/Al₂O₃", "CA_SI": "CaO/SiO₂",
+    "FE_SI": "Fe₂O₃/SiO₂", "SO3_CA": "SO₃/CaO",
+    "LOI_ASH": "LOI/(SiO₂+Al₂O₃)",
+}
+COND_LABELS = {
+    "SiO2": "SiO₂", "Al2O3": "Al₂O₃", "Fe2O3": "Fe₂O₃",
+    "CaO": "CaO", "MgO": "MgO", "TiO2": "TiO₂", "SO3": "SO₃",
+    "LOI": "LOI", "K2O": "K₂O", "Na2O": "Na₂O", "ALK": "K₂O+Na₂O",
+}
+
+
+def composition_ratios(preds: Dict) -> Dict:
+    """把成分换算成工艺判断常用的比值，缺失值按 0 处理。"""
+    si = float(preds.get("SiO2") or 0.0)
+    al = float(preds.get("Al2O3") or 0.0)
+    fe = float(preds.get("Fe2O3") or 0.0)
+    ca = float(preds.get("CaO") or 0.0)
+    so3 = float(preds.get("SO3") or 0.0)
+    loi = float(preds.get("LOI") or 0.0)
+    return {
+        "SI_AL": round(si / max(al, 0.01), 2),
+        "AL_SI": round(al / max(si, 0.01), 2),
+        "FE_AL": round(fe / max(al, 0.01), 2),
+        "CA_SI": round(ca / max(si, 0.01), 2),
+        "FE_SI": round(fe / max(si, 0.01), 2),
+        "SO3_CA": round(so3 / max(ca, 0.01), 2),
+        "LOI_ASH": round(loi / max(si + al, 0.01), 2),
+        "ALK": round(float(preds.get("K2O") or 0.0) + float(preds.get("Na2O") or 0.0), 2),
+    }
+
+
+def dominant_regime(preds: Dict) -> str:
+    """按主量成分给物料一个主导特征，避免宽区间条目“通吃”。"""
+    si = float(preds.get("SiO2") or 0.0)
+    al = float(preds.get("Al2O3") or 0.0)
+    fe = float(preds.get("Fe2O3") or 0.0)
+    ca = float(preds.get("CaO") or 0.0)
+    so3 = float(preds.get("SO3") or 0.0)
+    loi = float(preds.get("LOI") or 0.0)
+    if loi >= 35 and loi / max(si + al, 1.0) >= 0.50:
+        return "carbon"
+    if al >= 32 and al / max(si, 1.0) >= 0.45:
+        return "high_al"
+    if fe >= 10:
+        return "high_fe"
+    if ca >= 12 or (ca >= 7 and so3 >= 4):
+        return "calcareous"
+    if si >= 60 and si / max(al, 1.0) >= 2.3:
+        return "high_si"
+    if 16 <= al <= 34 and 38 <= si <= 64:
+        return "aluminosilicate"
+    return "low_grade"
+
+
+def score_entry(entry: Dict, preds: Dict, regime: str) -> Tuple[float, List[str]]:
+    conds = dict(entry.get("conditions", {}))
+    ratios = dict(entry.get("ratios", {}))
+    allc = {**conds, **ratios}
+    if not allc:
         return 0.0, []
     hits, total = 0.0, 0.0
     reasons = []
-    for key, (lo, hi) in conds.items():
+    for key, (lo, hi) in allc.items():
         v = preds.get(key)
         if v is None:
             continue
-        total += 1.0
+        weight = 1.2 if key in ratios else 1.0
+        total += weight
+        label = RATIO_LABELS.get(key) or COND_LABELS.get(key) or key
         if lo <= v <= hi:
-            hits += 1.0
-            reasons.append(f"{key}={v:.1f}% 在 {lo:g}~{hi:g}% 区间内")
+            hits += weight
+            if key in ratios:
+                reasons.append(f"{label}={v:.2f} 在 {lo:g}~{hi:g}")
+            else:
+                reasons.append(f"{label}={v:.1f}% 在 {lo:g}~{hi:g}% 区间内")
         else:
             dist = (lo - v) if v < lo else (v - hi)
             span = max(1e-6, hi - lo)
-            hits += max(0.0, 1.0 - dist / (0.6 * span + 1e-6)) * 0.35
+            hits += max(0.0, 1.0 - dist / (0.6 * span + 1e-6)) * 0.35 * weight
     if total == 0:
         return 0.0, []
-    # 首条件视为该工艺的“定义性指标”（如高铝提取看 Al2O3、脱硫看 CaO），
-    # 不命中则大幅降权，避免仅靠 Fe/Ca 宽区间“蹭”到高分。
-    first = next((k for k in conds if preds.get(k) is not None), None)
     score = hits / total
-    if first is not None:
-        lo, hi = conds[first]
-        if not (lo <= preds[first] <= hi):
-            score *= 0.35
-    return score, reasons
+
+    # 定义性指标门控：如高铝提取看 Al/Si、燃料看 LOI/灰分，不命中大幅降权。
+    gate_keys = entry.get("gate") or [next(iter(allc))]
+    gate_failed = False
+    for key in gate_keys:
+        if key in allc and preds.get(key) is not None:
+            lo, hi = allc[key]
+            if not (lo <= preds[key] <= hi):
+                gate_failed = True
+                reasons.insert(0, f"门控 {RATIO_LABELS.get(key) or COND_LABELS.get(key) or key} 未命中")
+                break
+    if gate_failed:
+        score *= 0.35
+
+    allowed = entry.get("regime") or []
+    if allowed:
+        if regime in allowed:
+            score += 0.05
+            reasons.insert(0, f"主导特征={regime} 与工艺匹配")
+        else:
+            score *= 0.55
+            reasons.insert(0, f"主导特征={regime} 与工艺不匹配")
+    score += float(entry.get("bias") or 0.0)
+    return max(0.0, min(score, 1.40)), reasons
 
 
 def offline_recommend(stones: List[Dict], area: Dict, inputs: Dict) -> Dict:
     kb = load_process_kb()
-    loi = _num(inputs.get("LOI烧失量"))
-    so3 = _num(inputs.get("SO3"))
     out = []
     for s in stones:
+        stone_inputs = s.get("inputs") or inputs or {}
         preds = {k: v["value"] for k, v in (s.get("pred") or {}).items()}
+        loi = _num(stone_inputs.get("LOI烧失量"))
+        so3 = _num(stone_inputs.get("SO3"))
+        k2o = _num(stone_inputs.get("K2O"))
+        na2o = _num(stone_inputs.get("Na2O"))
         if loi is not None:
             preds["LOI"] = loi
         if so3 is not None:
             preds["SO3"] = so3
+        if k2o is not None:
+            preds["K2O"] = k2o
+        if na2o is not None:
+            preds["Na2O"] = na2o
+        ratios = composition_ratios(preds)
+        preds.update(ratios)
+        regime = dominant_regime(preds)
+
+        feat = s.get("feature") or {}
+        codes = {(feat.get(k) or {}).get("code") for k in ("D", "L", "G", "T", "S")}
         scored = []
         for e in kb:
-            sc, reasons = score_entry(e, preds)
-            # 工程常识修正：高烧失量物料做水泥/烧结砖需额外配料，优先低热值燃料
-            if preds.get("LOI", 0) > 20 and e["id"] == "cement_mix":
-                sc -= 0.12
-            # 图像特征仅影响「工艺可行性」，不参与成分判断
-            bonus = 0.0
-            feat = s.get("feature") or {}
-            dcode = (feat.get("D") or {}).get("code", "D2")
-            tcode = (feat.get("T") or {}).get("code", "T2")
-            if e["id"] == "aggregate_fill" and dcode in ("D3", "D4"):
-                bonus += 0.12 if dcode == "D4" else 0.08
-            if e["id"] == "cement_mix" and dcode in ("D1", "D2"):
-                bonus += 0.04
-            if e["id"] == "ceramic_kaolin" and tcode == "T1":
-                bonus += 0.05
-            if e["id"] == "power_combustion" and preds.get("LOI", 0) > 12:
-                bonus += 0.08 if preds.get("LOI", 0) > 20 else 0.04
+            sc, reasons = score_entry(e, preds, regime)
+            bonus = sum(float(b) for code, b in (e.get("physical") or {}).items() if code in codes)
+            bonus = min(bonus, 0.15)
             scored.append((sc + bonus, sc, e, reasons))
         scored.sort(key=lambda x: -x[0])
-        top = [x for x in scored if x[1] >= 0.5][:3]
+        top = [x for x in scored if x[1] >= 0.55][:3]
+        if len(top) < 2:
+            for x in scored:
+                if x not in top and x[1] >= 0.30:
+                    top.append(x)
+                if len(top) >= 3:
+                    break
         if not top:
-            top = [x for x in scored if x[1] > 0.25][:3]
+            top = [x for x in scored if x[1] > 0.30][:3]
         if not top:
             top = [x for x in scored if x[2]["id"] == "aggregate_fill"] or scored[:1]
         primary = top[0]
-        secondary = [x for x in top[1:3]]
+        secondary = top[1:3]
         out.append({
             "id": s["id"],
+            "regime": regime,
+            "feature": s.get("feature") or {},
+            "ratios": {k: ratios[k] for k in ("SI_AL", "CA_SI", "FE_AL", "LOI_ASH")},
             "primary": {
                 "kb_id": primary[2]["id"], "name": primary[2]["name"],
-                "why": "；".join(primary[3][:3]) or primary[2]["reason"],
+                "why": "；".join(primary[3][:4]) or primary[2]["basis"],
+                "basis": primary[2].get("basis", ""),
                 "process": primary[2]["process"],
                 "products": primary[2]["products"],
                 "risk": primary[2]["risk"],
@@ -587,14 +706,14 @@ def offline_recommend(stones: List[Dict], area: Dict, inputs: Dict) -> Dict:
             },
             "secondary": [{
                 "kb_id": x[2]["id"], "name": x[2]["name"],
-                "why": "；".join(x[3][:2]) or x[2]["reason"],
+                "why": "；".join(x[3][:2]) or x[2].get("basis", ""),
                 "score": round(x[0], 2),
             } for x in secondary],
-            "confidence": "高" if primary[1] >= 0.7 else ("中" if primary[1] >= 0.45 else "低"),
+            "confidence": "高" if primary[1] >= 0.75 else ("中" if primary[1] >= 0.50 else "低"),
         })
     return {
         "ok": True, "mode": "offline",
-        "summary": f"离线知识库按成分区间匹配，共 {len(kb)} 条工艺；矿区：{area.get('name', '未选择')}。",
+        "summary": f"离线知识库按成分区间 + 特征比值 + 物性档位匹配，共 {len(kb)} 条工艺；矿区：{area.get('name', '未选择')}。",
         "stones": out,
     }
 
@@ -692,15 +811,26 @@ def call_llm(cfg: Dict, messages: List[Dict], timeout: int = 90) -> Dict:
 def build_messages(stones: List[Dict], area: Dict, inputs: Dict, kb: List[Dict],
                    quality: Dict) -> List[Dict]:
     compact_kb = [{"id": e["id"], "name": e["name"], "conditions": e["conditions"],
-                   "process": e["process"], "risk": e["risk"]} for e in kb]
+                   "ratios": e.get("ratios", {}), "regime": e.get("regime", []),
+                   "process": e["process"], "basis": e.get("basis", ""), "risk": e["risk"]} for e in kb]
     stone_lines = []
     for s in stones:
         preds = {k: v["value"] for k, v in (s.get("pred") or {}).items()}
+        si = s.get("inputs") or inputs or {}
+        for k_src, k_dst in (("LOI烧失量", "LOI"), ("SO3", "SO3"), ("K2O", "K2O"), ("Na2O", "Na2O")):
+            v = _num(si.get(k_src))
+            if v is not None:
+                preds[k_dst] = v
+        ratios = composition_ratios(preds)
+        preds.update(ratios)
         feat = s.get("feature") or {}
         fdesc = "，".join(f"{feat[k]['code']} {feat[k]['name']}" for k in ["L", "G", "T", "S", "D"]
                           if k in feat)
         stone_lines.append({
-            "id": s["id"], "composition_wt%": preds,
+            "id": s["id"], "composition_wt%": {k: preds[k] for k in ("SiO2", "Al2O3", "Fe2O3", "CaO") if k in preds},
+            "field_indicators": si,
+            "composition_ratios": ratios,
+            "dominant_regime": dominant_regime(preds),
             "physical_features": fdesc,
             "detection_conf": s.get("conf"),
         })
@@ -811,6 +941,28 @@ def api_cases():
         c["image_exists"] = (TESTS / img_rel).exists()
         cases.append(c)
     return jsonify({"ok": True, "note": data.get("note", ""), "cases": cases})
+
+
+@app.route("/api/demo_samples")
+def api_demo_samples():
+    doc = load_json(DEMO_SAMPLES_PATH, {}) or {}
+    samples = doc.get("samples") or []
+    if not samples:
+        return jsonify({"ok": False, "error": "逐石示例文件缺失"}), 404
+    areas = (load_json(AREAS_PATH, {}) or {}).get("areas", [])
+    by_id = {a.get("id"): a for a in areas}
+    out = []
+    for s in samples:
+        area = by_id.get(s.get("area_id"))
+        if area is None:
+            area = {
+                "id": s.get("area_id") or "demo_area",
+                "name": f"{s.get('city', '')}矿区" if s.get("city") else "示例矿区",
+                "province": s.get("province", "山西"),
+                "city": s.get("city", ""),
+            }
+        out.append({**s, "area": area})
+    return jsonify({"ok": True, "note": doc.get("note", ""), "samples": out})
 
 
 @app.route("/api/demo_sample")
@@ -984,6 +1136,24 @@ def api_recommend():
     if result is None:
         result = offline_recommend(stones, area, inputs)
         result["fallback_reason"] = err or ("未配置 API Key，使用离线知识库" if not cfg.get("configured") else "")
+    # 在线结果也补齐逐石物性/比值/主导特征，保证第三步卡片与离线模式同样可解释。
+    by_id = {s.get("id"): s for s in stones}
+    for r in result.get("stones", []):
+        s = by_id.get(r.get("id"))
+        if not s:
+            continue
+        r.setdefault("feature", s.get("feature") or {})
+        if not r.get("ratios") or not r.get("regime"):
+            preds = {k: v["value"] for k, v in (s.get("pred") or {}).items()}
+            st_in = s.get("inputs") or inputs or {}
+            for key, src in (("LOI", "LOI烧失量"), ("SO3", "SO3"), ("K2O", "K2O"), ("Na2O", "Na2O")):
+                val = _num(st_in.get(src))
+                if val is not None:
+                    preds[key] = val
+            ratios = composition_ratios(preds)
+            preds.update(ratios)
+            r.setdefault("ratios", {k: ratios[k] for k in ("SI_AL", "CA_SI", "FE_AL", "LOI_ASH")})
+            r.setdefault("regime", dominant_regime(preds))
     return jsonify(result)
 
 
