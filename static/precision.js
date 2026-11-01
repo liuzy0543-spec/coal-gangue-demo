@@ -121,12 +121,12 @@ function render(d) {
     <div class="result-block"><h4>成分特征</h4><div style="font-size:11px;color:var(--muted)">${ratios || "—"}</div></div>
     <div class="result-block"><h4>推荐理由</h4><div style="font-size:11px;color:var(--muted);line-height:1.8">${esc(p.why || "")}</div>
       <div style="font-size:11px;color:var(--muted);line-height:1.8;margin-top:5px">${esc(p.basis || "")}</div></div>
-    <div class="result-block"><h4>八工序执行链</h4><div class="chain">${chain || "—"}</div></div>
-    <div class="result-block"><h4>关键参数</h4><div class="param-grid">${params}</div></div>
+    <div class="result-block"><h4>阶段 4 · 八工序执行链</h4><div class="chain">${chain || "—"}</div></div>
+    <div class="result-block"><h4>阶段 4 · 关键参数</h4><div class="param-grid">${params}</div></div>
     <div class="result-block"><h4>路线硬性要求</h4><ul class="req-list">${reqs}</ul></div>
-    <div class="result-block"><h4>风险与合规门控</h4>${riskHTML(d.risks)}
+    <div class="result-block"><h4>阶段 5 · 风险与合规门控</h4>${riskHTML(d.risks)}
       ${blocked ? `<div style="margin-top:8px">${blocked}</div>` : ""}</div>
-    <div class="result-block"><h4>建议补检</h4><div class="sub-list">${tests}</div></div>
+    <div class="result-block"><h4>阶段 5 · 建议补检</h4><div class="sub-list">${tests}</div></div>
     <div class="result-block"><h4>同路线相似标杆（kNN）</h4>
       <div class="table-wrap"><table class="case-table"><thead><tr><th>样品</th><th>城市</th><th>路线</th><th>SiO₂/Al₂O₃/Fe₂O₃/CaO</th><th>距离</th><th>28d 强度</th></tr></thead><tbody>${cases}</tbody></table></div>
     </div>

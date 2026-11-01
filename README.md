@@ -77,7 +77,8 @@
 - 定义性门控 `gate`；
 - 主导特征 `regime`；
 - 物性偏好 `physical`（D/L/G/T/S 只做小权重排序）；
-- **八工序链** `process_chain`、关键参数 `parameters`、产品、机理、风险、标准、建议补检、路线硬性要求。
+- **阶段 4**：八工序链 `process_chain`、关键参数 `parameters`、产品、机理；
+- **阶段 5**：风险门控、合规/环保红线、建议补检、路线硬性要求、对标标准。
 
 `risk_rules` 8 条：
 
