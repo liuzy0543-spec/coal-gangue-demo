@@ -1,0 +1,266 @@
+{
+  "version": "2026-11-01.1",
+  "note": "来自 2026-11 全量总表 635 条真实库的 5 个典型样品；图像与化学是演示配对，不是同一块样品。",
+  "samples": [
+    {
+      "sample_id": "Shanxi-Jincheng-Jinju-CFB-CalorificModel",
+      "title": "高发热量洗选矸（CFB 混烧）",
+      "province": "山西",
+      "city": "晋城市",
+      "coalfield": "沁水煤田",
+      "area_id": "qs_mt",
+      "source_type": "洗选煤矸石(WASHED)",
+      "color": "灰黑色/深灰色",
+      "petrology": "炭质页岩型(高碳类)",
+      "route_code": "R12",
+      "route_name": "破碎粉磨+燃煤/生物质耦合掺烧(发电与热能回收)",
+      "inputs": {
+        "SiO2": 48.5,
+        "Al2O3": 24.2,
+        "Fe2O3": 5.8,
+        "CaO": 2.8,
+        "MgO": 1.6,
+        "TiO2": 1.05,
+        "K2O": 1.8,
+        "Na2O": 0.45,
+        "SO3": 1.45,
+        "LOI": 12.35,
+        "St": 1.45,
+        "Qnet": 10.61,
+        "ash": 59.68,
+        "volatile": 16.5,
+        "FC": 21.72,
+        "kaolinite": 45.0,
+        "quartz": 35.0,
+        "illite": 10.0,
+        "chlorite": 3.0,
+        "calcite": 4.0,
+        "pyrite": 3.0
+      },
+      "measured": {
+        "SiO2": 48.5,
+        "Al2O3": 24.2,
+        "Fe2O3": 5.8,
+        "CaO": 2.8
+      },
+      "quality": {
+        "pH": 7.4,
+        "heavy_metal": "符合I类一般工业固废(可生态回填/农用)",
+        "radioactivity": "符合A类建材(产销与使用范围不受限)"
+      },
+      "performance": {
+        "strength_28d": 0.0,
+        "activity_28d": 92.0,
+        "carbon_reduction": 185.0
+      }
+    },
+    {
+      "sample_id": "Shanxi-Shuozhou-ZhouMingkai-SizeActivity",
+      "title": "高岭石洗矸（中温煅烧活性粉）",
+      "province": "山西",
+      "city": "朔州市",
+      "coalfield": "宁武煤田",
+      "area_id": "ps_mq",
+      "source_type": "洗选煤矸石(WASHED)",
+      "color": "灰黑色/深灰色",
+      "petrology": "高岭石型(粘土岩类)",
+      "route_code": "R04",
+      "route_name": "中温煅烧脱羟基(550-900°C)+粉磨(火山灰混合材)",
+      "inputs": {
+        "SiO2": 41.88,
+        "Al2O3": 27.55,
+        "Fe2O3": 1.75,
+        "CaO": 1.01,
+        "MgO": 0.14,
+        "TiO2": 0.81,
+        "K2O": 0.47,
+        "Na2O": 0.15,
+        "SO3": 1.66,
+        "LOI": 24.61,
+        "St": 1.66,
+        "Qnet": 5.21,
+        "ash": 68.2,
+        "volatile": 18.5,
+        "FC": 11.8,
+        "kaolinite": 62.0,
+        "quartz": 26.0,
+        "illite": 6.0,
+        "chlorite": 2.0,
+        "calcite": 2.0,
+        "pyrite": 2.0
+      },
+      "measured": {
+        "SiO2": 41.88,
+        "Al2O3": 27.55,
+        "Fe2O3": 1.75,
+        "CaO": 1.01
+      },
+      "quality": {
+        "pH": 7.5,
+        "heavy_metal": "符合I类一般工业固废(可生态回填/农用)",
+        "radioactivity": "符合A类建材(产销与使用范围不受限)"
+      },
+      "performance": {
+        "strength_28d": 51.5,
+        "activity_28d": 102.0,
+        "carbon_reduction": 250.0
+      }
+    },
+    {
+      "sample_id": "Shanxi-Yuncheng-GuoWenchao-AluminaExtraction",
+      "title": "高硫富铁高岭石矸（提铝/酸浸）",
+      "province": "山西",
+      "city": "运城市",
+      "coalfield": "河东煤田",
+      "area_id": "hd_mt",
+      "source_type": "新鲜原矸(RAW)",
+      "color": "深灰黑色",
+      "petrology": "高岭石质-黄铁矿富铁粘土岩",
+      "route_code": "R07",
+      "route_name": "化工冶金与有价组分提取",
+      "inputs": {
+        "SiO2": 49.82,
+        "Al2O3": 22.37,
+        "Fe2O3": 12.11,
+        "CaO": 0.4,
+        "MgO": 0.42,
+        "TiO2": 1.01,
+        "K2O": 1.7,
+        "Na2O": 0.43,
+        "SO3": 11.55,
+        "LOI": 18.33,
+        "St": 4.62,
+        "Qnet": 3.9,
+        "ash": 79.87,
+        "volatile": 12.5,
+        "FC": 5.83,
+        "kaolinite": 42.0,
+        "quartz": 30.0,
+        "illite": 8.0,
+        "chlorite": 2.0,
+        "calcite": 2.0,
+        "pyrite": 16.0
+      },
+      "measured": {
+        "SiO2": 49.82,
+        "Al2O3": 22.37,
+        "Fe2O3": 12.11,
+        "CaO": 0.4
+      },
+      "quality": {
+        "pH": 7.1,
+        "heavy_metal": "达标_GB 5085.3",
+        "radioactivity": "满足GB 6566-2010标准要求"
+      },
+      "performance": {
+        "strength_28d": 0.0,
+        "activity_28d": 0.0,
+        "carbon_reduction": 520.0
+      }
+    },
+    {
+      "sample_id": "Shanxi-Taiyuan-BMIA-BrickUpgrading",
+      "title": "烧结砖/陶粒原料（高岭石型原矸）",
+      "province": "山西",
+      "city": "太原市",
+      "coalfield": "西山煤田",
+      "area_id": "xsh_mt",
+      "source_type": "新鲜原矸(RAW)",
+      "color": "灰黑色/深灰色",
+      "petrology": "高岭石型(粘土岩类)",
+      "route_code": "R06",
+      "route_name": "高温固相烧结/发泡(1050-1400°C制陶粒/砖/陶瓷)",
+      "inputs": {
+        "SiO2": 58.0,
+        "Al2O3": 22.0,
+        "Fe2O3": 6.0,
+        "CaO": 2.2,
+        "MgO": 1.5,
+        "TiO2": 1.0,
+        "K2O": 1.8,
+        "Na2O": 0.5,
+        "SO3": 1.0,
+        "LOI": 6.0,
+        "St": 1.2,
+        "Qnet": 3.5,
+        "ash": 78.0,
+        "volatile": 14.0,
+        "FC": 6.0,
+        "kaolinite": 50.0,
+        "quartz": 32.0,
+        "illite": 10.0,
+        "chlorite": 3.0,
+        "calcite": 3.0,
+        "pyrite": 2.0
+      },
+      "measured": {
+        "SiO2": 58.0,
+        "Al2O3": 22.0,
+        "Fe2O3": 6.0,
+        "CaO": 2.2
+      },
+      "quality": {
+        "pH": 7.5,
+        "heavy_metal": "符合I类一般工业固废(可生态回填/农用)",
+        "radioactivity": "符合A类建材(产销与使用范围不受限)"
+      },
+      "performance": {
+        "strength_28d": 25.0,
+        "activity_28d": 90.0,
+        "carbon_reduction": 135.0
+      }
+    },
+    {
+      "sample_id": "Shanxi-Jincheng-YangZhiqiang-NonClinker",
+      "title": "自燃矸常温胶凝（钙质协同）",
+      "province": "山西",
+      "city": "晋城市",
+      "coalfield": "沁水煤田",
+      "area_id": "qs_mt",
+      "source_type": "自燃煤矸石(BURNT)",
+      "color": "砖红色/红褐色(自燃或高铁)",
+      "petrology": "高岭石型(粘土岩类)",
+      "route_code": "R02",
+      "route_name": "粉磨+钙质/石膏协同胶结(常温胶凝/膏体充填)",
+      "inputs": {
+        "SiO2": 56.4,
+        "Al2O3": 24.8,
+        "Fe2O3": 6.2,
+        "CaO": 2.6,
+        "MgO": 1.4,
+        "TiO2": 0.95,
+        "K2O": 1.6,
+        "Na2O": 0.5,
+        "SO3": 0.85,
+        "LOI": 4.7,
+        "St": 0.95,
+        "Qnet": 4.5,
+        "ash": 84.0,
+        "volatile": 10.5,
+        "FC": 4.5,
+        "kaolinite": 48.0,
+        "quartz": 36.0,
+        "illite": 8.0,
+        "chlorite": 3.0,
+        "calcite": 3.0,
+        "pyrite": 2.0
+      },
+      "measured": {
+        "SiO2": 56.4,
+        "Al2O3": 24.8,
+        "Fe2O3": 6.2,
+        "CaO": 2.6
+      },
+      "quality": {
+        "pH": 7.6,
+        "heavy_metal": "符合I类一般工业固废(可生态回填/农用)",
+        "radioactivity": "符合A类建材(产销与使用范围不受限)"
+      },
+      "performance": {
+        "strength_28d": 45.1,
+        "activity_28d": 105.0,
+        "carbon_reduction": 280.0
+      }
+    }
+  ]
+}

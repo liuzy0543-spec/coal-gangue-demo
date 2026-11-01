@@ -473,3 +473,60 @@ td.num, th.num { font-family: var(--mono); text-align: right; }
   .quality { grid-template-columns: 1fr 1fr; }
   .rec-body .row { grid-template-columns: 1fr; gap: 2px; }
 }
+/* ===== precision port (2026-11) ===== */
+.port-links { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.precision-hero {
+  display:flex; justify-content:space-between; gap:22px; align-items:flex-end;
+  padding:26px 30px; margin:8px 0 16px; border:1px solid var(--line);
+  border-radius:16px; background:linear-gradient(135deg, rgba(56,189,248,.10), rgba(34,197,94,.05));
+}
+.eyebrow { font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:#7dd3fc; }
+.precision-hero h2 { margin:8px 0 8px; font-size:26px; letter-spacing:-.02em; }
+.precision-hero p { margin:0; max-width:760px; color:var(--muted); font-size:12.5px; line-height:1.9; }
+.hero-stat { display:grid; grid-template-columns:auto auto; gap:0 10px; align-items:baseline; flex:none; }
+.hero-stat b { font-family:var(--mono); font-size:28px; color:#7dd3fc; text-align:right; }
+.hero-stat span { font-size:10.5px; color:var(--dim); }
+.precision-grid { align-items:start; }
+.form-section { margin-top:15px; padding-top:13px; border-top:1px solid var(--line); }
+.form-section:first-of-type { border-top:0; padding-top:0; }
+.chem-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+.chem-grid .field { margin:0; }
+.chem-grid input, .chem-grid select { width:100%; }
+.form-details { margin-top:14px; border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:rgba(255,255,255,.015); }
+.form-details summary { cursor:pointer; font-size:11.5px; color:var(--muted); }
+.form-details summary span { color:var(--dim); font-size:10px; margin-left:8px; }
+.result-card { position:sticky; top:14px; }
+.route-badge { display:flex; gap:13px; align-items:center; padding:14px; border:1px solid rgba(56,189,248,.35); border-radius:13px; background:linear-gradient(135deg,rgba(56,189,248,.13),rgba(34,197,94,.06)); }
+.route-code { font-family:var(--mono); font-size:24px; font-weight:800; color:#7dd3fc; min-width:66px; }
+.route-title { font-size:18px; font-weight:700; line-height:1.35; }
+.route-meta { display:flex; gap:7px; flex-wrap:wrap; margin-top:7px; }
+.route-score { margin-left:auto; text-align:right; flex:none; }
+.route-score b { display:block; font-family:var(--mono); font-size:22px; color:var(--ok); }
+.route-score span { font-size:10px; color:var(--dim); }
+.chain { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.chain-step { border:1px solid var(--line); border-radius:999px; padding:4px 9px; font-size:10.5px; color:var(--muted); background:rgba(255,255,255,.02); }
+.chain-step b { color:#7dd3fc; font-family:var(--mono); font-size:9px; margin-right:4px; }
+.param-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+.param-item { border:1px solid var(--line); border-radius:8px; padding:7px 9px; font-size:11px; color:var(--muted); }
+.param-item b { display:block; color:var(--ink); font-size:11px; margin-bottom:2px; }
+.risk-card { border:1px solid rgba(245,158,11,.35); background:rgba(245,158,11,.07); border-radius:10px; padding:10px 12px; margin-top:8px; }
+.risk-card.high { border-color:rgba(239,68,68,.4); background:rgba(239,68,68,.07); }
+.risk-card .rt { font-weight:700; font-size:12px; color:#fbbf24; }
+.risk-card.high .rt { color:#fca5a5; }
+.risk-card p { margin:4px 0 0; font-size:11px; color:var(--muted); line-height:1.7; }
+.req-list { margin:5px 0 0; padding-left:17px; font-size:11px; color:var(--muted); line-height:1.8; }
+.case-table { width:100%; border-collapse:collapse; font-size:10.5px; }
+.case-table th, .case-table td { border-bottom:1px solid var(--line); padding:6px 5px; text-align:left; vertical-align:top; }
+.case-table th { color:var(--dim); font-weight:600; }
+.case-table td.num { font-family:var(--mono); text-align:right; }
+.result-block { margin-top:14px; }
+.result-block h4 { margin:0 0 6px; font-size:11.5px; color:#7dd3fc; font-weight:700; }
+.blocked-line { font-size:10.5px; color:#fca5a5; line-height:1.8; }
+.footer-note { display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; color:var(--dim); font-size:10px; margin:18px 0 8px; }
+.footer-note a { color:#7dd3fc; text-decoration:none; }
+@media (max-width:980px) {
+  .precision-hero { flex-direction:column; align-items:flex-start; }
+  .hero-stat { grid-template-columns:auto auto auto auto; }
+  .chem-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .result-card { position:static; }
+}

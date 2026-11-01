@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>煤矸石智能识别 · 成分预测 · 工艺决策</title>
+<title>煤矸石智能匹配平台 · 端口二视觉粗筛</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛏</text></svg>">
 <link rel="stylesheet" href="/static/styles.css">
 </head>
@@ -15,14 +15,15 @@
       <div class="logo">⛏</div>
       <div>
         <h1>煤矸石 <span>智能识别 · 成分预测 · 工艺决策</span></h1>
-        <p>Gangue Vision &amp; Process Copilot · 大创中期 Demo</p>
+        <p>Gangue Vision &amp; Process Copilot · 双端口 Demo</p>
       </div>
     </div>
     <div class="top-actions">
+      <a class="btn sm ghost" href="/precision" style="text-decoration:none">端口一 · 化验单精准匹配 →</a>
       <span class="chip" id="chip-device"><i class="dot"></i>设备 <b>—</b></span>
       <span class="chip" id="chip-model"><i class="dot"></i>模型 <b>—</b></span>
       <span class="chip" id="chip-llm"><i class="dot"></i>LLM <b>—</b></span>
-      <button class="btn sm ghost" id="btn-settings">⚙ API 设置</button>
+      <button class="btn sm ghost" id="btn-kb-top">📚 知识库说明</button>
     </div>
   </header>
 
@@ -37,7 +38,7 @@
     </div>
     <div class="step-tab" data-step="3">
       <div class="step-no">3</div>
-      <div><h3>资源化工艺推荐</h3><p>知识库 + GLM-4.5-Flash 逐石工艺方案</p></div>
+      <div><h3>资源化工艺推荐</h3><p>R01~R12 知识库 + 含硫/高钙风险门控</p></div>
     </div>
   </nav>
 
@@ -186,10 +187,10 @@
           </div>
 
           <div class="notice cyan" id="stone-link-note" style="margin-top:12px">
-            <span>🔗</span><span id="stone-link-text">先完成第一步图像识别；第二步会按识别到的矸石数量自动生成逐石输入框，并带入 D/L/G/T/S 物理特征。</span>
+            <span>🔗</span><span id="stone-link-text">先完成第一步图像识别；第二步会按识别到的矸石数量自动生成逐石输入框，并带入 D/L/G/T/S 物理特征；工业分析与 XRD 可在卡片内展开填写。</span>
           </div>
 
-          <div class="section-label">逐石现场指标（数量 = 第一步矸石数）</div>
+          <div class="section-label">逐石现场指标（数量 = 第一步矸石数；工业分析/XRD 可选）</div>
           <div id="stone-input-list" class="stone-input-list">
             <div class="pred-empty" style="min-height:150px"><div class="big">🪨</div>请先在第一步上传图片并识别，或载入「测试集」</div>
           </div>
@@ -202,7 +203,7 @@
 
           <div class="model-grid" id="model-grid"></div>
           <div class="notice" style="margin-top:12px">
-            <span>⚠</span><span>R² 为<b>按来源组 5 折 × 3 个分组种子</b>的交叉验证均值。Al₂O₃ / Fe₂O₃ / CaO 目前属于“可用但偏弱”，预测值请结合区间阅读；SiO₂ 已通过三种子 &gt; 0.70 验收。</span>
+            <span>⚠</span><span>v2 模型：<b>328 条 / 299 来源组</b>，按来源组 5 折 × 3 种子；R² = SiO₂ 0.720 · Al₂O₃ 0.641 · Fe₂O₃ 0.430 · CaO 0.354。输入超出常规矸石域（SiO₂ 20~75、Al₂O₃ 5~45、Fe₂O₃ 0.1~25、CaO 0~20）时模型会标“域外”，请结合区间阅读。</span>
           </div>
         </div>
       </div>
@@ -235,7 +236,7 @@
           </div>
           <button class="btn primary block" id="btn-recommend" disabled>🧠 生成逐石工艺方案</button>
           <div style="display:flex;gap:8px;margin-top:9px">
-            <button class="btn sm ghost" id="btn-llm-config" style="flex:1">配置 / 测试 API</button>
+            <button class="btn sm ghost" id="btn-llm-config" style="flex:1;display:none">配置 / 测试 API</button>
             <button class="btn sm ghost" id="btn-kb-view" style="flex:1">查看知识库</button>
           </div>
 
@@ -246,7 +247,7 @@
           <div id="kb-hits" style="font-size:11.5px;color:var(--dim)">生成方案后显示逐石命中的知识库条目。</div>
 
           <div class="notice cyan" style="margin-top:14px">
-            <span>ⓘ</span><span>API Key 只保存在本机 <code>config.json</code>；未配置时自动切换<b>离线知识库</b>，demo 仍可完整跑通。</span>
+            <span>ⓘ</span><span>本版使用 <b>R01~R12 规则知识库 + 硬性风险门控</b>，无需联网；含硫/高钙/重金属等风险会先于打分拦截。</span>
           </div>
         </div>
       </div>

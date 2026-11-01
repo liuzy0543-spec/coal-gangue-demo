@@ -97,15 +97,10 @@ async function init() {
 
 function renderLLMChip(llm) {
   const el = $("#chip-llm");
-  if (llm && llm.configured) {
-    el.className = "chip ok";
-    el.innerHTML = `<i class="dot"></i>LLM <b>${esc(llm.model)}</b>`;
-    $("#llm-sub").textContent = `${llm.model} · 已配置`;
-  } else {
-    el.className = "chip warn";
-    el.innerHTML = `<i class="dot"></i>LLM <b>离线知识库</b>`;
-    $("#llm-sub").textContent = "未配置 API · 使用离线知识库";
-  }
+  el.className = "chip ok";
+  el.innerHTML = `<i class="dot"></i>规则引擎 <b>R01~R12</b>`;
+  const sub = $("#llm-sub");
+  if (sub) sub.textContent = "R01~R12 规则库 · 风险门控优先";
 }
 
 /* ---------------- 逐石指标输入（第一步 → 第二步） ---------------- */
@@ -130,10 +125,16 @@ function featureChips(feature) {
 
 function caseToSample(c) {
   const measured = { ...(c.measured || {}) };
-  if (measured.LOI烧失量 == null && c.inputs) measured.LOI烧失量 = c.inputs["LOI烧失量"];
+  if (measured.LOI == null && c.inputs) measured.LOI = c.inputs.LOI ?? c.inputs["LOI烧失量"];
+  if (measured.LOI烧失量 == null && c.inputs) measured.LOI烧失量 = c.inputs.LOI ?? c.inputs["LOI烧失量"];
+  const ins = { ...(c.inputs || {}) };
+  if (ins.LOI == null) ins.LOI = ins.LOI烧失量;
+  if (ins.kaolinite == null) ins.kaolinite = ins.高岭石;
+  if (ins.illite == null) ins.illite = ins.伊利石;
+  if (ins.quartz == null) ins.quartz = ins.石英;
   return {
     sample_id: c.sample_id, title: c.title || c.sample_id,
-    inputs: c.inputs || {}, measured,
+    inputs: ins, measured,
     source: "测试集配对行", note: "来自测试集 A/B/C 的库内实测行",
   };
 }
@@ -167,16 +168,17 @@ function stoneFieldHTML(f, stoneId) {
 
 function stoneCardHTML(st, sample, index) {
   const schema = (S.meta && S.meta.schema) || [];
-  const optional = ["高岭石", "伊利石", "石英"];
-  const main = schema.filter((f) => !optional.includes(f.key))
+  const fieldGroup = schema.filter((f) => (f.group || "field") === "field");
+  const advGroup = schema.filter((f) => ["industrial", "xrd"].includes(f.group));
+  const main = fieldGroup
     .map((f) => stoneFieldHTML({ ...f, value: sample && sample.inputs ? sample.inputs[f.key] : "" }, st.id))
     .join("");
-  const xrd = schema.filter((f) => optional.includes(f.key))
+  const xrd = advGroup
     .map((f) => stoneFieldHTML({ ...f, value: sample && sample.inputs ? sample.inputs[f.key] : "" }, st.id))
     .join("");
   const m = (sample && sample.measured) || null;
   const measured = m
-    ? `库内实测：LOI <b>${fmt(m.LOI烧失量, 2)}</b> · SiO₂ <b>${fmt(m.SiO2, 2)}</b> · Al₂O₃ <b>${fmt(m.Al2O3, 2)}</b> · Fe₂O₃ <b>${fmt(m.Fe2O3, 2)}</b> · CaO <b>${fmt(m.CaO, 2)}</b>
+    ? `库内实测：LOI <b>${fmt(m.LOI ?? m.LOI烧失量, 2)}</b> · SiO₂ <b>${fmt(m.SiO2, 2)}</b> · Al₂O₃ <b>${fmt(m.Al2O3, 2)}</b> · Fe₂O₃ <b>${fmt(m.Fe2O3, 2)}</b> · CaO <b>${fmt(m.CaO, 2)}</b>
        <button class="btn ghost sm" data-error-stone="${esc(st.id)}" style="margin-left:6px">误差</button>`
     : `无库内实测值，不参与误差对比`;
   return `<div class="stone-input-card" data-stone="${esc(st.id)}">
@@ -189,10 +191,10 @@ function stoneCardHTML(st, sample, index) {
       <span class="sample-tag" title="${esc(sample && (sample.title + (sample.source ? " · " + sample.source : "")) || "")}">${sample ? "库内默认 " + esc(sample.sample_id) : "无默认"}</span>
     </div>
     <div class="stone-fields">${main}</div>
-    <details class="xrd-details stone-xrd">
-      <summary>XRD 可选定量（高岭石 / 伊利石 / 石英）<span>填高岭石 → Al₂O₃ 条件模型</span></summary>
+    ${xrd ? `<details class="xrd-details stone-xrd">
+      <summary>工业分析 / XRD 可选指标<span>填写越多，v2 模型越准</span></summary>
       <div class="stone-fields" style="margin-top:7px">${xrd}</div>
-    </details>
+    </details>` : ""}
     <div class="stone-measured">${measured}</div>
   </div>`;
 }
@@ -212,10 +214,18 @@ function renderStoneInputs() {
   box.innerHTML = stones.map((st, i) => {
     const sample = sampleForStone(i);
     if (sample && sample.measured) {
+      const measured = { ...(sample.measured || {}) };
+      if (measured.LOI == null && sample.inputs) measured.LOI = sample.inputs.LOI ?? sample.inputs["LOI烧失量"];
+      if (measured.LOI烧失量 == null) measured.LOI烧失量 = measured.LOI;
       S.stoneRefs[st.id] = {
         sample_id: sample.sample_id,
         title: sample.title || sample.sample_id,
-        measured: sample.measured,
+        measured,
+        meta: {
+          province: sample.province || "", city: sample.city || "",
+          coalfield: sample.coalfield || "", source_type: sample.source_type || "",
+          color: sample.color || "", petrology: sample.petrology || "",
+        },
       };
     }
     return stoneCardHTML(st, sample, i);
@@ -310,7 +320,7 @@ function showPredictionError(rows, refs, title) {
     }).join("");
     blocks.push(`<div class="err-stone">
       <div class="err-stone-head"><span class="id-badge">${esc(r.id)}</span><b>${esc(ref.sample_id)}</b>
-        <span class="mono">LOI ${fmt(measured.LOI烧失量, 2)} · 实测行</span></div>
+        <span class="mono">LOI ${fmt(measured.LOI ?? measured.LOI烧失量, 2)} · 实测行</span></div>
       <div class="table-wrap"><table class="err-table">
         <thead><tr><th>目标</th><th class="num">真实值 wt%</th><th class="num">预测值 wt%</th><th class="num">绝对误差</th><th class="num">误差百分比</th></tr></thead>
         <tbody>${trs}</tbody></table></div>
@@ -468,7 +478,7 @@ function renderModelGrid(metrics) {
     const pct = Math.max(0, Math.min(100, isFinite(r2) ? Math.max(0, r2) * 100 : 0));
     return `<div class="model-card" title="${esc(m.note || "")}">
       <div class="top"><span class="name">${labels[t]}</span><span class="r2">R² ${isFinite(r2) ? (r2 >= 0 ? "+" : "") + r2.toFixed(3) : "—"}</span></div>
-      <div class="feat">${esc((m.features || []).join(" + "))}<br>MAE ${fmt(m.MAE_mean, 2)} wt% · n=${m.n || "—"} / ${m.groups || "—"} 组${xrd ? `<br><span style="color:var(--cyan)">XRD 条件 R² +${Number(xrd.R2_mean).toFixed(3)} · n=${xrd.n}/${xrd.groups} 组</span>` : ""}</div>
+      <div class="feat">${esc((m.features || []).slice(0, 5).join(" + "))}${(m.features || []).length > 5 ? ` 等 ${m.features.length} 项` : ""}<br>MAE ${fmt(m.MAE_mean, 2)} wt% · n=${m.n || "—"} / ${m.groups || "—"} 组${xrd ? `<br><span style="color:var(--cyan)">XRD 条件 R² +${Number(xrd.R2_mean).toFixed(3)} · n=${xrd.n}/${xrd.groups} 组</span>` : ""}</div>
       <div class="meter"><i style="width:${pct}%"></i></div>
     </div>`;
   }).join("");
@@ -620,7 +630,7 @@ async function doPredict() {
   if (!stones.length) { toast("当前图片没有可参与预测的矸石", "err"); return; }
   const inputsByStone = collectAllStoneInputs();
   for (const st of stones) {
-    const v = inputsByStone[st.id] && inputsByStone[st.id]["LOI烧失量"];
+    const v = inputsByStone[st.id] && (inputsByStone[st.id].LOI ?? inputsByStone[st.id]["LOI烧失量"]);
     if (v == null || Number.isNaN(v)) {
       toast(`${st.id} 缺少 LOI 烧失量（马弗炉可测）`, "err");
       return;
@@ -635,7 +645,7 @@ async function doPredict() {
     const d = await api("/api/predict", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        stones: stones.map((s) => ({ ...s, inputs: inputsByStone[s.id] })),
+        stones: stones.map((s) => ({ ...s, inputs: inputsByStone[s.id], meta: (S.stoneRefs[s.id] || {}).meta || {} })),
         quality: S.detect.quality,
         inputs: firstInputs,
         area,
@@ -694,7 +704,8 @@ function renderPrediction(d) {
         <thead><tr><th>目标</th><th class="num">预测值</th><th class="num">90% 区间</th><th class="num">R²</th></tr></thead>
         <tbody>${trs}</tbody>
       </table></div>
-      <div class="stone-measured">该石输入：LOI <b>${fmt(inp["LOI烧失量"], 2)}</b> · K₂O <b>${fmt(inp.K2O, 2)}</b> · MgO <b>${fmt(inp.MgO, 2)}</b> · Na₂O <b>${fmt(inp.Na2O, 2)}</b> · TiO₂ <b>${fmt(inp.TiO2, 2)}</b> · SO₃ <b>${fmt(inp.SO3, 2)}</b>${r.den == null ? "" : ` · _den ${fmt(r.den, 1)}`}</div>
+      ${types.some(([k]) => r.pred[k] && r.pred[k].domain_ok === false) ? `<div class="notice" style="margin-top:6px;padding:6px 8px"><span>⚠</span><span>该石预测值超出 v2 常规建模域（SiO₂ 20~75 / Al₂O₃ 5~45 / Fe₂O₃ 0.1~25 / CaO 0~20），结果仅作方向参考。</span></div>` : ""}
+      <div class="stone-measured">该石输入：LOI <b>${fmt(inp.LOI ?? inp["LOI烧失量"], 2)}</b> · K₂O <b>${fmt(inp.K2O, 2)}</b> · MgO <b>${fmt(inp.MgO, 2)}</b> · Na₂O <b>${fmt(inp.Na2O, 2)}</b> · TiO₂ <b>${fmt(inp.TiO2, 2)}</b> · SO₃ <b>${fmt(inp.SO3, 2)}</b>${r.den == null ? "" : ` · _den ${fmt(r.den, 1)}`}</div>
     </div>`;
   }).join("");
 
@@ -733,7 +744,7 @@ function renderContext(d) {
   const lines = (d.rows || []).map((r) => {
     const inp = r.inputs || {};
     return `<div><span class="id-badge" style="min-width:34px">${esc(r.id)}</span>
-      LOI <b>${fmt(inp["LOI烧失量"], 2)}</b> · K₂O ${fmt(inp.K2O, 2)} · MgO ${fmt(inp.MgO, 2)} · Na₂O ${fmt(inp.Na2O, 2)} · TiO₂ ${fmt(inp.TiO2, 2)} · SO₃ ${fmt(inp.SO3, 2)}</div>`;
+      LOI <b>${fmt(inp.LOI ?? inp["LOI烧失量"], 2)}</b> · K₂O ${fmt(inp.K2O, 2)} · MgO ${fmt(inp.MgO, 2)} · Na₂O ${fmt(inp.Na2O, 2)} · TiO₂ ${fmt(inp.TiO2, 2)} · SO₃ ${fmt(inp.SO3, 2)}</div>`;
   }).join("");
   const q = S.detect && S.detect.quality;
   $("#context-box").innerHTML = `
@@ -754,6 +765,7 @@ async function doRecommend() {
     const stones = S.prediction.rows.map((r) => ({
       id: r.id, conf: r.conf, feature: curFeat.get(r.id) || r.feature, pred: r.pred,
       inputs: (S.stoneInputs && S.stoneInputs[r.id]) || r.inputs || S.inputs,
+      meta: r.meta || {},
     }));
     const d = await api("/api/recommend", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -797,6 +809,7 @@ function renderRecommend(d) {
     return `<div class="rec-card">
       <div class="rec-head">
         <span class="id-badge">${esc(r.id)}</span>
+        <span class="mono" style="color:#7dd3fc;font-size:11px">${esc(p.route_code || "")}</span>
         <span class="title">${esc(p.name || "—")}</span>
         ${reg ? `<span class="chip" style="padding:1px 7px;font-size:10px">${esc(reg)}</span>` : ""}
         <span class="conf ${esc(r.confidence || "中")}">可信度 ${esc(r.confidence || "中")}</span>
@@ -808,7 +821,12 @@ function renderRecommend(d) {
         ${p.basis ? `<div class="row"><span class="k">机理依据</span><div class="v rec-note">${esc(p.basis)}</div></div>` : ""}
         ${p.process ? `<div class="row"><span class="k">工艺路线</span><div class="v">${esc(p.process)}</div></div>` : ""}
         ${p.products ? `<div class="row"><span class="k">目标产品</span><div class="v"><b>${esc(p.products)}</b></div></div>` : ""}
+        ${p.standard ? `<div class="row"><span class="k">对标标准</span><div class="v rec-note">${esc(p.standard)}</div></div>` : ""}
+        ${(p.requirements || []).length ? `<div class="row"><span class="k">路线要求</span><div class="v"><ul class="req-list">${p.requirements.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div></div>` : ""}
         ${p.risk ? `<div class="row"><span class="k">落地风险</span><div class="v">${esc(p.risk)}</div></div>` : ""}
+        ${(r.risks || []).length ? `<div class="row"><span class="k">风险门控</span><div class="v">${r.risks.map((x) => `<span class="chip warn" style="margin:2px 3px 0 0;font-size:10px" title="${esc(x.message)}">${esc(x.title)}</span>`).join("")}</div></div>` : ""}
+        ${(r.required_tests || []).length ? `<div class="row"><span class="k">建议补检</span><div class="v" style="font-size:10.5px;color:var(--dim)">${r.required_tests.map(esc).join(" / ")}</div></div>` : ""}
+        ${(r.blocked || []).length ? `<div class="row"><span class="k">风险拦截</span><div class="v" style="font-size:10.5px;color:#fca5a5">${r.blocked.map((b) => `${esc(b.route_code)} ${esc(b.route_name)}`).join(" / ")}</div></div>` : ""}
         ${subs ? `<div class="row"><span class="k">备选工艺</span><div class="v"><div class="sub-list">${subs}</div></div></div>` : ""}
         ${p.ref ? `<div class="row"><span class="k">参考</span><div class="v rec-note">${esc(p.ref)}</div></div>` : ""}
       </div>
@@ -883,7 +901,8 @@ async function openKB() {
     const d = await api("/api/kb");
     $("#kb-count").textContent = `共 ${d.entries.length} 条`;
     $("#kb-body").innerHTML = `
-      <div class="notice cyan" style="margin-bottom:10px"><span>ⓘ</span><span>${d.entries.length} 条工艺按「成分区间 + 特征比值（Si/Al、Ca/Si、Fe/Al、LOI/灰分、SO₃/CaO）+ 第一步物性档位」匹配；阈值来自工程经验/88 条案例桥接，不是强制标准，落地前须做小试/中试。</span></div>
+      <div class="notice cyan" style="margin-bottom:10px"><span>ⓘ</span><span>R01~R12（${d.entries.length} 条）按「成分区间 + 特征比值 + 定义性门控 + 第一步物性档位」匹配；另含 ${(d.risk_rules||[]).length} 条含硫/高钙/重金属等硬性风险规则，不替代小试/中试。</span></div>
+      ${(d.risk_rules||[]).length ? `<div class="notice" style="margin-bottom:10px"><span>⛔</span><span>${d.risk_rules.map((x)=>`<b>${esc(x.title)}</b>：${esc(x.message)}`).join("<br>")}</span></div>` : ""}
       <div class="kb-grid">` +
       d.entries.map((e) => {
         const cond = Object.entries(e.conditions || {}).map(([k, r]) => `${k} ${r[0]}~${r[1]}%`).join(" · ");
@@ -982,7 +1001,8 @@ function bind() {
   $("#btn-predict").addEventListener("click", doPredict);
   $("#btn-recommend").addEventListener("click", doRecommend);
 
-  $("#btn-settings").addEventListener("click", openSettings);
+  $("#btn-kb-top")?.addEventListener("click", openKB);
+  $("#btn-settings")?.addEventListener("click", openSettings);
   $("#btn-llm-config").addEventListener("click", openSettings);
   $("#btn-save-cfg").addEventListener("click", saveConfig);
   $("#btn-test-llm").addEventListener("click", testLLM);

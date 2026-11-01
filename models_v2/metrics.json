@@ -1,0 +1,218 @@
+{
+  "protocol": "按来源组 5 折 × 种子 42/7/2024 pooled OOF；RidgeCV + XGBoost 线性加权",
+  "data": "2026-11 635 条真实库；R01~R12，排除 D 级统计均值，四目标齐全，加和 85~105，常规矸石域",
+  "updated": "2026-11-01",
+  "n": 328,
+  "groups": 299,
+  "domain": {
+    "SiO2": [
+      20,
+      75
+    ],
+    "Al2O3": [
+      5,
+      45
+    ],
+    "Fe2O3": [
+      0.1,
+      25
+    ],
+    "CaO": [
+      0,
+      20
+    ]
+  },
+  "SiO2": {
+    "model": "RidgeCV + XGBoost 集成（ridge 0.35）",
+    "features": [
+      "LOI",
+      "K2O",
+      "MgO",
+      "Na2O",
+      "TiO2",
+      "SO3",
+      "ash",
+      "volatile",
+      "FC",
+      "St",
+      "Qnet",
+      "kaolinite",
+      "quartz",
+      "illite",
+      "chlorite",
+      "calcite",
+      "pyrite",
+      "P2O5",
+      "_den"
+    ],
+    "cat_feats": [
+      "province",
+      "city",
+      "coalfield",
+      "source_type",
+      "color",
+      "petrology"
+    ],
+    "R2_mean": 0.7196019572007124,
+    "R2_sd": 0.018715051641739706,
+    "MAE_mean": 3.4464885366342384,
+    "RMSE_mean": 4.640061971249919,
+    "n": 328,
+    "groups": 299,
+    "weight_ridge": 0.35000000000000003,
+    "seeds": [
+      0.7361338319790522,
+      0.6992829706044765,
+      0.7233890690186082
+    ],
+    "coverage": "328/328"
+  },
+  "Al2O3": {
+    "model": "RidgeCV + XGBoost 集成（ridge 0.35）",
+    "features": [
+      "LOI",
+      "K2O",
+      "MgO",
+      "Na2O",
+      "TiO2",
+      "SO3",
+      "ash",
+      "volatile",
+      "FC",
+      "St",
+      "Qnet",
+      "kaolinite",
+      "quartz",
+      "illite",
+      "chlorite",
+      "calcite",
+      "pyrite",
+      "P2O5",
+      "_den"
+    ],
+    "cat_feats": [
+      "province",
+      "city",
+      "coalfield",
+      "source_type",
+      "color",
+      "petrology"
+    ],
+    "R2_mean": 0.6409548817445286,
+    "R2_sd": 0.006658148054578045,
+    "MAE_mean": 3.2860397444464353,
+    "RMSE_mean": 4.357510743383482,
+    "n": 328,
+    "groups": 299,
+    "weight_ridge": 0.35000000000000003,
+    "seeds": [
+      0.6339060949690059,
+      0.6471376372712005,
+      0.6418209129933793
+    ],
+    "coverage": "328/328"
+  },
+  "Fe2O3": {
+    "model": "RidgeCV + XGBoost 集成（ridge 0.10）",
+    "features": [
+      "LOI",
+      "K2O",
+      "MgO",
+      "Na2O",
+      "TiO2",
+      "SO3",
+      "ash",
+      "volatile",
+      "FC",
+      "St",
+      "Qnet",
+      "kaolinite",
+      "quartz",
+      "illite",
+      "chlorite",
+      "calcite",
+      "pyrite",
+      "P2O5",
+      "_den"
+    ],
+    "cat_feats": [
+      "province",
+      "city",
+      "coalfield",
+      "source_type",
+      "color",
+      "petrology"
+    ],
+    "R2_mean": 0.429781416263042,
+    "R2_sd": 0.04937346931466146,
+    "MAE_mean": 1.7704521926686156,
+    "RMSE_mean": 2.745587585955944,
+    "n": 328,
+    "groups": 299,
+    "weight_ridge": 0.1,
+    "seeds": [
+      0.4515582425270461,
+      0.3732633324050052,
+      0.4645226738570747
+    ],
+    "coverage": "328/328"
+  },
+  "CaO": {
+    "model": "RidgeCV + XGBoost 集成（ridge 0.40）",
+    "features": [
+      "LOI",
+      "K2O",
+      "MgO",
+      "Na2O",
+      "TiO2",
+      "SO3",
+      "ash",
+      "volatile",
+      "FC",
+      "St",
+      "Qnet",
+      "kaolinite",
+      "quartz",
+      "illite",
+      "chlorite",
+      "calcite",
+      "pyrite",
+      "P2O5",
+      "_den"
+    ],
+    "cat_feats": [
+      "province",
+      "city",
+      "coalfield",
+      "source_type",
+      "color",
+      "petrology"
+    ],
+    "R2_mean": 0.35345887757959654,
+    "R2_sd": 0.04862597757974025,
+    "MAE_mean": 1.2882960622942943,
+    "RMSE_mean": 2.0083683694295984,
+    "n": 328,
+    "groups": 299,
+    "weight_ridge": 0.4,
+    "seeds": [
+      0.31168874868474483,
+      0.34184889710220323,
+      0.4068389869518414
+    ],
+    "coverage": "328/328"
+  },
+  "baseline_2026_10": {
+    "SiO2": 0.7272,
+    "Al2O3": 0.2719,
+    "Fe2O3": 0.338,
+    "CaO": 0.1196
+  },
+  "change_vs_baseline": {
+    "SiO2": -0.0076,
+    "Al2O3": 0.3691,
+    "Fe2O3": 0.0918,
+    "CaO": 0.2339
+  },
+  "note": "2026-11 新库 635 条中筛选 328 条常规矸石域；SiO2 与旧交付版基本持平（-0.008），Al2O3/Fe2O3/CaO 提升。"
+}

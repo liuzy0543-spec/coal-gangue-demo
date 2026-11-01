@@ -1,0 +1,208 @@
+[
+  {
+    "key": "LOI",
+    "label": "LOI 烧失量",
+    "unit": "%",
+    "group": "field",
+    "required": true,
+    "range": [
+      0,
+      60
+    ],
+    "step": 0.1,
+    "tip": "GB/T 212 马弗炉；碳质/碳酸盐分解"
+  },
+  {
+    "key": "K2O",
+    "label": "K₂O",
+    "unit": "%",
+    "group": "field",
+    "required": false,
+    "range": [
+      0,
+      10
+    ],
+    "step": 0.01
+  },
+  {
+    "key": "MgO",
+    "label": "MgO",
+    "unit": "%",
+    "group": "field",
+    "required": false,
+    "range": [
+      0,
+      20
+    ],
+    "step": 0.01
+  },
+  {
+    "key": "Na2O",
+    "label": "Na₂O",
+    "unit": "%",
+    "group": "field",
+    "required": false,
+    "range": [
+      0,
+      10
+    ],
+    "step": 0.01
+  },
+  {
+    "key": "TiO2",
+    "label": "TiO₂",
+    "unit": "%",
+    "group": "field",
+    "required": false,
+    "range": [
+      0,
+      8
+    ],
+    "step": 0.01
+  },
+  {
+    "key": "SO3",
+    "label": "SO₃",
+    "unit": "%",
+    "group": "field",
+    "required": false,
+    "range": [
+      0,
+      20
+    ],
+    "step": 0.01
+  },
+  {
+    "key": "ash",
+    "label": "灰分 Aad",
+    "unit": "%",
+    "group": "industrial",
+    "required": false,
+    "range": [
+      30,
+      98
+    ],
+    "step": 0.1
+  },
+  {
+    "key": "volatile",
+    "label": "挥发分 Vad",
+    "unit": "%",
+    "group": "industrial",
+    "required": false,
+    "range": [
+      0,
+      45
+    ],
+    "step": 0.1
+  },
+  {
+    "key": "FC",
+    "label": "固定碳 FC",
+    "unit": "%",
+    "group": "industrial",
+    "required": false,
+    "range": [
+      0,
+      40
+    ],
+    "step": 0.1
+  },
+  {
+    "key": "St",
+    "label": "全硫 St",
+    "unit": "%",
+    "group": "industrial",
+    "required": false,
+    "range": [
+      0,
+      20
+    ],
+    "step": 0.01,
+    "tip": ">1.5 触发高硫强酸性风险"
+  },
+  {
+    "key": "Qnet",
+    "label": "发热量 Qnet,ar",
+    "unit": "MJ/kg",
+    "group": "industrial",
+    "required": false,
+    "range": [
+      0,
+      25
+    ],
+    "step": 0.01
+  },
+  {
+    "key": "kaolinite",
+    "label": "高岭石",
+    "unit": "%",
+    "group": "xrd",
+    "required": false,
+    "range": [
+      0,
+      100
+    ],
+    "step": 0.1
+  },
+  {
+    "key": "quartz",
+    "label": "石英",
+    "unit": "%",
+    "group": "xrd",
+    "required": false,
+    "range": [
+      0,
+      100
+    ],
+    "step": 0.1
+  },
+  {
+    "key": "illite",
+    "label": "伊利石/云母",
+    "unit": "%",
+    "group": "xrd",
+    "required": false,
+    "range": [
+      0,
+      100
+    ],
+    "step": 0.1
+  },
+  {
+    "key": "chlorite",
+    "label": "绿泥石/蒙脱石",
+    "unit": "%",
+    "group": "xrd",
+    "required": false,
+    "range": [
+      0,
+      100
+    ],
+    "step": 0.1
+  },
+  {
+    "key": "calcite",
+    "label": "方解石/白云石",
+    "unit": "%",
+    "group": "xrd",
+    "required": false,
+    "range": [
+      0,
+      100
+    ],
+    "step": 0.1
+  },
+  {
+    "key": "pyrite",
+    "label": "黄铁矿/菱铁矿",
+    "unit": "%",
+    "group": "xrd",
+    "required": false,
+    "range": [
+      0,
+      100
+    ],
+    "step": 0.1
+  }
+]

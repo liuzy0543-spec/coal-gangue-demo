@@ -34,10 +34,11 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, render_template
 
 ROOT = Path(__file__).resolve().parent
 MODELS = ROOT / "models"
+MODELS_V2 = ROOT / "models_v2"
 KB_DIR = ROOT / "kb"
 OUT = ROOT / "outputs"
 UPLOADS = OUT / "uploads"
@@ -55,7 +56,12 @@ DEMO_PATH = DATA_DIR / "demo_sample.json"
 DEMO_SAMPLES_PATH = DATA_DIR / "demo_samples.json"
 AREAS_PATH = KB_DIR / "mining_areas.json"
 PROCESS_KB_PATH = KB_DIR / "process_kb.json"
+PROCESS_KB_V3_PATH = KB_DIR / "process_kb_v3.json"
+DEMO_SAMPLES_V2_PATH = DATA_DIR / "demo_samples_v2.json"
+V2_DATA_PATH = DATA_DIR / "新数据库_635.xlsx"
 CONFIG_PATH = ROOT / "config.json"
+
+from kb_engine_v3 import recommend as kb_recommend, load_kb as load_kb_v3, ratios as kb_ratios
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024
@@ -89,7 +95,7 @@ FEATURE_TIPS = {
 }
 
 app_state: Dict = {"model": None, "device": "cpu", "models": {}, "ready": False,
-                   "yolo_error": None}
+                   "yolo_error": None, "cases_v2": None}
 _YOLO_LOCK = threading.Lock()
 
 
@@ -236,20 +242,66 @@ def annotate(rgb: np.ndarray, stones: List[Dict]) -> Image.Image:
 # ---------------------------------------------------------------------------
 # 模型加载
 # ---------------------------------------------------------------------------
+def load_cases_v2() -> List[Dict]:
+    if not V2_DATA_PATH.exists():
+        return []
+    d = pd.read_excel(V2_DATA_PATH, sheet_name="煤矸石全量数据库_标准输入总表",
+                      header=3, skiprows=[4])
+    rename = {"SiO2_wt%": "SiO2", "Al2O3_wt%": "Al2O3", "Fe2O3_wt%": "Fe2O3", "CaO_wt%": "CaO",
+              "MgO_wt%": "MgO", "TiO2_wt%": "TiO2", "K2O_wt%": "K2O", "Na2O_wt%": "Na2O",
+              "SO3_wt%": "SO3", "烧失量LOI_wt%": "LOI", "全硫St_wt%": "St",
+              "发热量Qnet_MJ_kg": "Qnet", "灰分A_wt%": "ash", "挥发分V_wt%": "volatile",
+              "固定碳FC_wt%": "FC", "高岭石_wt%": "kaolinite", "石英_wt%": "quartz",
+              "伊利石与云母_wt%": "illite", "绿泥石与蒙脱石_wt%": "chlorite",
+              "方解石与白云石_wt%": "calcite", "黄铁矿与菱铁矿_wt%": "pyrite"}
+    rows = []
+    for _, r in d.iterrows():
+        rec = {k: _num(r.get(src)) for src, k in rename.items()}
+        if any(rec.get(k) is None for k in ("SiO2", "Al2O3", "Fe2O3", "CaO")):
+            continue
+        row = {
+            "sample_id": str(r.get("样品原始代号") or ""),
+            "city": str(r.get("城市") or ""), "province": str(r.get("省份") or ""),
+            "coalfield": str(r.get("所属煤田或聚煤区") or ""),
+            "source_type": str(r.get("样品原始状态分类") or ""),
+            "color": str(r.get("外观颜色分类") or ""),
+            "petrology": str(r.get("岩石学与矿物类型") or ""),
+            "route_code": str(r.get("12大标准组合处理工艺路线编码") or ""),
+            "route_name": str(r.get("12大标准组合处理工艺路线名称") or ""),
+            "doi": str(r.get("DOI或文献标准号") or ""),
+            "strength_28d": _num(r.get("抗压强度_28d_MPa")),
+            "activity_28d": _num(r.get("28d活性指数或保持率_%")),
+            "carbon_reduction": _num(r.get("碳减排潜力_kgCO2_t")),
+            **rec,
+        }
+        rows.append(row)
+    return rows
+
+
 def load_models() -> None:
     import joblib
 
+    use_v2 = (MODELS_V2 / "sio2_model.joblib").exists()
+    base = MODELS_V2 if use_v2 else MODELS
     app_state["models"] = {
-        "SiO2": joblib.load(MODELS / "sio2_model.joblib"),
-        "Al2O3": joblib.load(MODELS / "al2o3_model.joblib"),
-        "Fe2O3": joblib.load(MODELS / "fe2o3_model.joblib"),
-        "CaO": joblib.load(MODELS / "cao_model.joblib"),
+        "SiO2": joblib.load(base / "sio2_model.joblib"),
+        "Al2O3": joblib.load(base / "al2o3_model.joblib"),
+        "Fe2O3": joblib.load(base / "fe2o3_model.joblib"),
+        "CaO": joblib.load(base / "cao_model.joblib"),
     }
-    xrd_path = MODELS / "al2o3_xrd_model.joblib"
-    if xrd_path.exists():
-        app_state["models"]["Al2O3_xrd"] = joblib.load(xrd_path)
-    app_state["metrics"] = load_json(METRICS_PATH, {})
-    app_state["schema"] = load_json(SCHEMA_PATH, [])
+    if not use_v2:
+        xrd_path = MODELS / "al2o3_xrd_model.joblib"
+        if xrd_path.exists():
+            app_state["models"]["Al2O3_xrd"] = joblib.load(xrd_path)
+    app_state["metrics"] = load_json(base / "metrics.json", {})
+    app_state["schema"] = load_json(base / "input_schema.json", [])
+    app_state["model_source"] = "models_v2" if use_v2 else "models"
+    # full 635-record table for precision-port case retrieval
+    try:
+        app_state["cases_v2"] = load_cases_v2()
+    except Exception:
+        app_state["cases_v2"] = None
+        traceback.print_exc()
     app_state["ready"] = True
 
 
@@ -373,31 +425,89 @@ def _num(v) -> Optional[float]:
         return None
 
 
-def _den_from(inputs: Dict) -> float:
-    keys = ["LOI烧失量", "K2O", "MgO", "Na2O", "TiO2", "SO3"]
-    vals = [_num(inputs.get(k)) for k in keys]
-    vals = [v for v in vals if v is not None]
-    return float(sum(vals)) if vals else np.nan
+CITY_ALIAS = {
+    "太原": "太原市", "晋中": "晋中市", "晋城": "晋城市", "长治": "长治市",
+    "大同": "大同市", "朔州": "朔州市", "运城": "运城市", "临汾": "临汾市",
+    "吕梁": "吕梁市", "阳泉": "阳泉市", "忻州": "忻州市",
+}
 
 
-def build_row(inputs: Dict, area: Dict, source_type: str, stage: str) -> Dict:
+def _pick(inputs: Dict, *keys):
+    for k in keys:
+        if k in inputs and inputs.get(k) not in (None, ""):
+            return _num(inputs.get(k))
+    return None
+
+
+def _city_name(city: str) -> str:
+    city = str(city or "").strip()
+    if not city or city == "缺失":
+        return "缺失"
+    return CITY_ALIAS.get(city, city if city.endswith("市") else city + "市")
+
+
+def _source_name(source_type: str, stage: str = "") -> str:
+    s = f"{source_type or ''} {stage or ''}"
+    if "洗" in s:
+        return "洗选煤矸石(WASHED)"
+    if "自燃" in s:
+        return "自燃煤矸石(BURNT)"
+    if "煅烧" in s or "改性" in s:
+        return "实验室煅烧或改性矸(MODIFIED)"
+    if "风化" in s:
+        return "风化陈化矸石(WEATHERED)"
+    return "新鲜原矸(RAW)"
+
+
+def build_row(inputs: Dict, area: Dict, source_type: str, stage: str,
+              meta: Optional[Dict] = None) -> Dict:
+    """Map the UI model into the columns used by the 2026-11 v2 models."""
+    meta = meta or {}
+    area = area or {}
     row = {
-        "LOI烧失量": _num(inputs.get("LOI烧失量")),
-        "K2O": _num(inputs.get("K2O")),
-        "MgO": _num(inputs.get("MgO")),
-        "Na2O": _num(inputs.get("Na2O")),
-        "TiO2": _num(inputs.get("TiO2")),
-        "SO3": _num(inputs.get("SO3")),
-        "高岭石": _num(inputs.get("高岭石")),
-        "伊利石": _num(inputs.get("伊利石")),
-        "石英": _num(inputs.get("石英")),
-        "province": (area or {}).get("province", "山西"),
-        "city": (area or {}).get("city", "晋中"),
-        "gangue_source_type": source_type or "煤矸石",
-        "material_stage": stage or "RAW_OR_UNSPECIFIED_GANGUE",
+        "LOI": _pick(inputs, "LOI", "LOI烧失量", "烧失量LOI_wt%"),
+        "K2O": _pick(inputs, "K2O", "K2O_wt%"),
+        "MgO": _pick(inputs, "MgO", "MgO_wt%"),
+        "Na2O": _pick(inputs, "Na2O", "Na2O_wt%"),
+        "TiO2": _pick(inputs, "TiO2", "TiO2_wt%"),
+        "SO3": _pick(inputs, "SO3", "SO3_wt%"),
+        "ash": _pick(inputs, "ash", "灰分A_wt%", "灰分"),
+        "volatile": _pick(inputs, "volatile", "挥发分V_wt%", "挥发分"),
+        "FC": _pick(inputs, "FC", "固定碳FC_wt%", "固定碳"),
+        "St": _pick(inputs, "St", "全硫St_wt%", "全硫"),
+        "Qnet": _pick(inputs, "Qnet", "发热量Qnet_MJ_kg", "发热量"),
+        "kaolinite": _pick(inputs, "kaolinite", "高岭石_wt%", "高岭石"),
+        "quartz": _pick(inputs, "quartz", "石英_wt%", "石英"),
+        "illite": _pick(inputs, "illite", "伊利石与云母_wt%", "伊利石"),
+        "chlorite": _pick(inputs, "chlorite", "绿泥石与蒙脱石_wt%"),
+        "calcite": _pick(inputs, "calcite", "方解石与白云石_wt%"),
+        "pyrite": _pick(inputs, "pyrite", "黄铁矿与菱铁矿_wt%"),
+        "P2O5": _pick(inputs, "P2O5", "P2O5_MnO等其他_wt%"),
+        "province": meta.get("province") or area.get("province") or "山西",
+        "city": _city_name(meta.get("city") or area.get("city") or "晋中"),
+        "coalfield": meta.get("coalfield") or area.get("coalfield") or "缺失",
+        "source_type": meta.get("source_type") or _source_name(source_type, stage),
+        "color": meta.get("color") or "缺失",
+        "petrology": meta.get("petrology") or "缺失",
     }
-    row["_den闭合分母"] = _den_from(inputs)
+    vals = [row.get(k) for k in ("LOI", "K2O", "MgO", "Na2O", "TiO2", "SO3")]
+    row["_den"] = float(sum(v for v in vals if v is not None)) if any(v is not None for v in vals) else np.nan
+    row["_codes"] = meta.get("codes") or []
     return row
+
+
+def _predict_artifact(m: Dict, df: pd.DataFrame) -> float:
+    for feat in m.get("features", []) + m.get("cat_feats", []):
+        if feat not in df.columns:
+            df[feat] = np.nan
+    if "models" in m:
+        val = 0.0
+        for kind, weight in (m.get("weights") or {}).items():
+            if float(weight) <= 0:
+                continue
+            val += float(weight) * float(m["models"][kind].predict(df)[0])
+        return val
+    return float(m["pipeline"].predict(df)[0])
 
 
 def predict_values(row: Dict) -> Dict:
@@ -408,28 +518,28 @@ def predict_values(row: Dict) -> Dict:
     for t in ["SiO2", "Al2O3", "Fe2O3", "CaO"]:
         mt = metrics.get(t, {})
         conditional = False
-        # 有 XRD 高岭石定量时，Al2O3 切到专用条件模型（并加矿物学上界）
+        # legacy fallback: old Al2O3 XRD conditional model
         if (t == "Al2O3" and "Al2O3_xrd" in models
-                and (_num(row.get("高岭石")) or 0) > 0):
+                and (_num(row.get("kaolinite")) or _num(row.get("高岭石")) or 0) > 0):
             m = models["Al2O3_xrd"]
             mt = metrics.get("Al2O3_xrd", mt)
             conditional = True
         else:
             m = models[t]
-        pipe = m["pipeline"]
-        for feat in m.get("features", []):
-            if feat not in df.columns:
-                df[feat] = np.nan
         try:
-            val = float(pipe.predict(df)[0])
+            val = _predict_artifact(m, df)
         except Exception:
             val = float("nan")
         if conditional:
-            kaol = _num(row.get("高岭石")) or 0.0
-            ill = _num(row.get("伊利石")) or 0.0
+            kaol = _num(row.get("kaolinite")) or _num(row.get("高岭石")) or 0.0
+            ill = _num(row.get("illite")) or _num(row.get("伊利石")) or 0.0
             ub = (kaol * 0.395 + ill * 0.30) * 1.8 + 8.0
             val = min(val, ub)
         val = float(np.clip(val, 0, 100))
+        dom = (m.get("domain") or {}).get(t)
+        domain_ok = True
+        if dom:
+            domain_ok = bool(dom[0] <= val <= dom[1])
         out[t] = {
             "value": round(val, 2),
             "r2": mt.get("R2_mean"),
@@ -438,9 +548,10 @@ def predict_values(row: Dict) -> Dict:
             "model": mt.get("model"),
             "conditional": conditional,
             "coverage": mt.get("coverage"),
+            "domain": dom,
+            "domain_ok": domain_ok,
         }
     return out
-
 
 def predict_for_stones(payload: Dict) -> Dict:
     default_inputs = payload.get("inputs") or {}
@@ -465,17 +576,17 @@ def predict_for_stones(payload: Dict) -> Dict:
 
     rock_stones = [s for s in stones if s.get("cls") == ROCK_CLS]
     if not rock_stones:
-        loi = _num(default_inputs.get("LOI烧失量"))
+        loi = _num(default_inputs.get("LOI")) if _num(default_inputs.get("LOI")) is not None else _num(default_inputs.get("LOI烧失量"))
         if loi is None:
             return {"ok": False, "error": "请至少填写 LOI 烧失量（马弗炉可测的必需指标）"}
-        row = build_row(default_inputs, area, source_type, stage)
+        row = build_row(default_inputs, area, source_type, stage, meta=payload.get("meta"))
         base = predict_values(row)
         return {
             "ok": True,
             "area": area, "source_type": source_type, "stage": stage,
             "inputs": default_inputs,
-            "den": round(float(row["_den闭合分母"]), 2)
-            if np.isfinite(row["_den闭合分母"]) else None,
+            "den": round(float(row["_den"]), 2)
+            if np.isfinite(row["_den"]) else None,
             "base": base, "rows": [],
             "metrics": app_state.get("metrics", {}),
             "note": "没有可参与预测的矸石；图像只用于识别与物理特征。",
@@ -483,10 +594,10 @@ def predict_for_stones(payload: Dict) -> Dict:
 
     for s in rock_stones:
         inputs = _inputs_for(s)
-        loi = _num(inputs.get("LOI烧失量"))
+        loi = _num(inputs.get("LOI")) if _num(inputs.get("LOI")) is not None else _num(inputs.get("LOI烧失量"))
         if loi is None:
             return {"ok": False, "error": f"{s.get('id', '矸石')} 缺少 LOI 烧失量"}
-        row = build_row(inputs, area, source_type, stage)
+        row = build_row(inputs, area, source_type, stage, meta=s.get("meta"))
         base = predict_values(row)
         conf = float(s.get("conf") or 0)
         conf_norm = float(np.clip((conf - low) / max(1e-6, 0.95 - low), 0, 1))
@@ -506,9 +617,9 @@ def predict_for_stones(payload: Dict) -> Dict:
             }
         rows.append({
             "id": s["id"], "cls_name": s.get("cls_name"), "conf": conf,
-            "feature": s.get("feature"), "inputs": inputs,
-            "den": round(float(row["_den闭合分母"]), 2)
-            if np.isfinite(row["_den闭合分母"]) else None,
+            "feature": s.get("feature"), "inputs": inputs, "meta": s.get("meta") or {},
+            "den": round(float(row["_den"]), 2)
+            if np.isfinite(row["_den"]) else None,
             "pred": preds, "base": base,
         })
 
@@ -531,7 +642,7 @@ def predict_for_stones(payload: Dict) -> Dict:
 # 知识库 + 推荐
 # ---------------------------------------------------------------------------
 def load_process_kb() -> List[Dict]:
-    d = load_json(PROCESS_KB_PATH, {}) or {}
+    d = load_json(PROCESS_KB_V3_PATH, {}) or load_json(PROCESS_KB_PATH, {}) or {}
     return d.get("entries", [])
 
 
@@ -911,6 +1022,156 @@ def llm_recommend(stones: List[Dict], area: Dict, inputs: Dict, quality: Dict,
     }
 
 
+
+# ---------------------------------------------------------------------------
+# v3 双端口：R01~R12 知识库 + 端口一高精匹配
+# ---------------------------------------------------------------------------
+def _values_from_inputs(pred: Dict, inputs: Dict, feature: Dict = None) -> Dict:
+    vals = {}
+    for k, v in (pred or {}).items():
+        if isinstance(v, dict):
+            vals[k] = _num(v.get("value"))
+        else:
+            vals[k] = _num(v)
+    aliases = {
+        "LOI": ("LOI", "LOI烧失量", "烧失量LOI_wt%"),
+        "St": ("St", "全硫St_wt%", "全硫"),
+        "Qnet": ("Qnet", "发热量Qnet_MJ_kg", "发热量"),
+        "SO3": ("SO3", "SO3_wt%"),
+        "MgO": ("MgO", "MgO_wt%"),
+        "TiO2": ("TiO2", "TiO2_wt%"),
+        "K2O": ("K2O", "K2O_wt%"),
+        "Na2O": ("Na2O", "Na2O_wt%"),
+        "ash": ("ash", "灰分A_wt%", "灰分"),
+        "volatile": ("volatile", "挥发分V_wt%", "挥发分"),
+        "FC": ("FC", "固定碳FC_wt%", "固定碳"),
+        "kaolinite": ("kaolinite", "高岭石_wt%", "高岭石"),
+        "quartz": ("quartz", "石英_wt%", "石英"),
+        "illite": ("illite", "伊利石与云母_wt%", "伊利石"),
+        "chlorite": ("chlorite", "绿泥石与蒙脱石_wt%"),
+        "calcite": ("calcite", "方解石与白云石_wt%"),
+        "pyrite": ("pyrite", "黄铁矿与菱铁矿_wt%"),
+        "P2O5": ("P2O5", "P2O5_MnO等其他_wt%"),
+        "pH": ("pH", "浸出液pH值"),
+        "heavy_metal": ("heavy_metal", "重金属浸出合规等级"),
+        "radioactivity": ("radioactivity", "放射性核素分类"),
+    }
+    for target, keys in aliases.items():
+        for k in keys:
+            if k in (inputs or {}) and inputs.get(k) not in (None, ""):
+                vals[target] = inputs.get(k) if target in ("heavy_metal", "radioactivity") else _num(inputs.get(k))
+                break
+    codes = []
+    for k in ("D", "L", "G", "T", "S"):
+        v = (feature or {}).get(k)
+        if isinstance(v, dict) and v.get("code"):
+            codes.append(v["code"])
+    vals["_codes"] = codes
+    return vals
+
+
+def _shape_route(res: Dict, stone_id: str, feature: Dict = None, inputs: Dict = None) -> Dict:
+    p = res.get("primary", {})
+    p_out = {
+        "name": p.get("route_name", ""), "route_code": p.get("route_code", ""),
+        "category": p.get("category", ""), "score": p.get("score"),
+        "why": "；".join(p.get("why", [])), "basis": p.get("basis", ""),
+        "process": " → ".join(p.get("process_chain") or []),
+        "process_chain": p.get("process_chain") or [], "parameters": p.get("parameters") or {},
+        "products": p.get("products", ""), "risk": p.get("risk", ""),
+        "ref": p.get("standard", ""), "standard": p.get("standard", ""),
+        "requirements": p.get("requirements") or [],
+        "confidence": p.get("confidence", "中"),
+    }
+    secondary = [{
+        "name": x.get("route_name", ""), "route_code": x.get("route_code", ""),
+        "why": "；".join(x.get("why", [])), "score": x.get("score"),
+    } for x in (res.get("alternatives") or [])]
+    return {
+        "id": stone_id, "regime": res.get("regime", ""), "ratios": res.get("ratios", {}),
+        "feature": feature or {}, "inputs": inputs or {},
+        "primary": p_out, "secondary": secondary,
+        "blocked": res.get("blocked", []), "risks": res.get("risks", []),
+        "required_tests": res.get("required_tests", []),
+        "confidence": p.get("confidence", "中"),
+    }
+
+
+def recommend_stones_v3(stones: List[Dict], area: Dict, inputs: Dict, requirements: Dict | None = None) -> Dict:
+    req = dict(requirements or {})
+    req.setdefault("port", "vision")
+    out = []
+    for s in stones:
+        pred = s.get("pred") or {}
+        vals = _values_from_inputs(pred, s.get("inputs") or inputs or {}, s.get("feature"))
+        res = kb_recommend(vals, req)
+        out.append(_shape_route(res, s.get("id", ""), s.get("feature"), s.get("inputs") or inputs))
+    kb = load_kb_v3()
+    return {
+        "ok": True, "mode": "offline", "summary": f"按 R01~R12 知识库（{len(kb.get('entries', []))} 条路线）逐石匹配；先执行含硫/高钙/重金属等风险门控，再做成分-比值-物性打分。",
+        "stones": out, "kb_version": kb.get("version", ""),
+        "risk_rule_count": len(kb.get("risk_rules", [])),
+    }
+
+
+def find_similar_cases(values: Dict, route_code: str = "", k: int = 3) -> List[Dict]:
+    rows = app_state.get("cases_v2") or []
+    if not rows:
+        return []
+    fields = ["SiO2", "Al2O3", "Fe2O3", "CaO", "LOI", "SO3", "St", "Qnet"]
+    import numpy as np
+    arr = np.array([[r.get(f) if r.get(f) is not None else np.nan for f in fields] for r in rows], dtype=float)
+    med = np.nanmedian(arr, axis=0)
+    arr = np.where(np.isfinite(arr), arr, med)
+    std = np.nanstd(arr, axis=0)
+    std[std < 1e-9] = 1.0
+    z = (arr - np.nanmean(arr, axis=0)) / std
+    q = np.array([values.get(f) if values.get(f) is not None else med[i] for i, f in enumerate(fields)], dtype=float)
+    qz = (q - np.nanmean(arr, axis=0)) / std
+    weights = np.array([1.2, 1.2, 1.0, 1.0, 1.0, 0.8, 0.8, 0.5])
+    d = np.sqrt((((z - qz) ** 2) * weights).sum(axis=1))
+    order = np.argsort(d)
+    picked = []
+    for idx in order:
+        r = rows[int(idx)]
+        if route_code and r.get("route_code") != route_code and len(picked) < k:
+            continue
+        picked.append({
+            "sample_id": r.get("sample_id"), "city": r.get("city"), "province": r.get("province"),
+            "route_code": r.get("route_code"), "route_name": r.get("route_name"),
+            "distance": round(float(d[int(idx)]), 3),
+            "measured": {kk: r.get(kk) for kk in ("SiO2", "Al2O3", "Fe2O3", "CaO", "LOI", "SO3", "St", "Qnet")},
+            "performance": {"strength_28d": r.get("strength_28d"), "activity_28d": r.get("activity_28d"),
+                            "carbon_reduction": r.get("carbon_reduction")},
+            "doi": r.get("doi", ""),
+        })
+        if len(picked) >= k:
+            break
+    return picked
+
+
+def _json_safe(obj):
+    """Replace NaN/Inf with None so the browser's JSON.parse accepts the payload."""
+    if isinstance(obj, float):
+        return obj if np.isfinite(obj) else None
+    if isinstance(obj, dict):
+        return {k: _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_json_safe(v) for v in obj]
+    return obj
+
+
+def _precision_values(data: Dict) -> Dict:
+    """Flatten the precision form; accepts chemical/industrial/xrd/environment or flat keys."""
+    flat = {}
+    for section in ("chemical", "industrial", "xrd", "environment", "inputs", "meta"):
+        obj = data.get(section)
+        if isinstance(obj, dict):
+            flat.update(obj)
+    flat.update({k: v for k, v in data.items() if not isinstance(v, (dict, list))})
+    return _values_from_inputs(flat, flat)
+
+
 # ---------------------------------------------------------------------------
 # Flask 路由
 # ---------------------------------------------------------------------------
@@ -945,7 +1206,7 @@ def api_cases():
 
 @app.route("/api/demo_samples")
 def api_demo_samples():
-    doc = load_json(DEMO_SAMPLES_PATH, {}) or {}
+    doc = load_json(DEMO_SAMPLES_V2_PATH, {}) or load_json(DEMO_SAMPLES_PATH, {}) or {}
     samples = doc.get("samples") or []
     if not samples:
         return jsonify({"ok": False, "error": "逐石示例文件缺失"}), 404
@@ -982,6 +1243,69 @@ def api_demo_sample():
     return jsonify({"ok": True, "sample": {**doc, "area": area}})
 
 
+@app.route("/precision")
+def precision_page():
+    return send_from_directory(str(ROOT / "static"), "precision.html")
+
+
+@app.route("/api/precision/template")
+def api_precision_template():
+    doc = load_json(DEMO_SAMPLES_V2_PATH, {}) or {}
+    kb = load_kb_v3()
+    samples = []
+    for i, s in enumerate(doc.get("samples") or []):
+        samples.append({
+            "id": s.get("sample_id"), "label": f"{s.get('title','样品')} · {s.get('city','')}",
+            "inputs": s.get("inputs") or {}, "measured": s.get("measured") or {},
+            "route_code": s.get("route_code"), "route_name": s.get("route_name"),
+            "quality": s.get("quality") or {},
+            "meta": {k: s.get(k) for k in ("province", "city", "coalfield", "source_type", "color", "petrology")},
+        })
+    preferred = ["Shanxi-Jincheng-Jinju-CFB-CalorificModel", "Shanxi-Taiyuan-BMIA-BrickUpgrading",
+                 "Shanxi-Shuozhou-ZhouMingkai-SizeActivity", "Shanxi-Jincheng-YangZhiqiang-NonClinker",
+                 "Shanxi-Yuncheng-GuoWenchao-AluminaExtraction"]
+    samples.sort(key=lambda x: preferred.index(x["id"]) if x["id"] in preferred else 99)
+    return jsonify({"ok": True, "samples": samples, "routes": kb.get("entries", []),
+                    "risk_rules": kb.get("risk_rules", []), "version": kb.get("version", ""),
+                    "metrics": app_state.get("metrics", {})})
+
+
+@app.route("/api/precision/recommend", methods=["POST"])
+def api_precision_recommend():
+    data = request.get_json(force=True, silent=True) or {}
+    values = _precision_values(data)
+    requirements = dict(data.get("requirements") or {})
+    requirements["port"] = "precision"
+    try:
+        res = kb_recommend(values, requirements)
+        shaped = _shape_route(res, "P01", None, values)
+        code = shaped["primary"].get("route_code", "")
+        shaped["similar_cases"] = find_similar_cases(values, code, 3)
+        shaped["values"] = {k: v for k, v in values.items() if k != "_codes"}
+        shaped["requirements_echo"] = requirements
+        shaped["desired_route"] = requirements.get("desired_route", "")
+        if requirements.get("desired_route"):
+            desired = requirements["desired_route"].upper()
+            shaped["desired_status"] = ("matched" if code == desired else
+                                        "blocked_or_not_top")
+        return jsonify(_json_safe({"ok": True, **shaped}))
+    except Exception as exc:
+        traceback.print_exc()
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route("/api/health")
+def api_health():
+    kb = load_kb_v3()
+    return jsonify({"ok": True, "ready": app_state.get("ready", False),
+                    "model_source": app_state.get("model_source", "models"),
+                    "models": list((app_state.get("models") or {}).keys()),
+                    "kb_count": len(kb.get("entries", [])),
+                    "kb_version": kb.get("version", ""),
+                    "yolo_ready": app_state.get("model") is not None,
+                    "ports": {"port2": "/", "port1": "/precision", "api": "/api"}})
+
+
 @app.route("/api/meta")
 def api_meta():
     cfg = get_llm_config()
@@ -994,7 +1318,7 @@ def api_meta():
         "schema": app_state.get("schema", []),
         "metrics": app_state.get("metrics", {}),
         "areas": areas,
-        "kb_count": len(kb),
+        "kb_count": len(kb), "model_source": app_state.get("model_source", "models"),
         "llm": {"provider": cfg["provider"], "base_url": cfg["base_url"],
                 "model": cfg["model"], "protocol": cfg["protocol"],
                 "configured": cfg["configured"]},
@@ -1002,8 +1326,8 @@ def api_meta():
                                 for i, c in enumerate(v)] for k, v in LETTER.items()},
         "sources": {
             "recognition": "D:\\项目\\煤矸石识别（YOLOv8s，自训 2 类 + 低置信度规则）",
-            "composition": "E:\\项目\\煤矸石\\SiO2_交付包 + 四成分主表 v35",
-            "knowledge_base": f"kb/process_kb.json（{len(kb)} 条工艺，可扩展）",
+            "composition": "2026-11 新库 635 条；筛选 328 条常规矸石域训练 v2 集成模型",
+            "knowledge_base": f"kb/process_kb_v3.json（R01~R12，{len(kb)} 条路线，可扩展）",
         },
     })
 
@@ -1111,50 +1435,15 @@ def api_recommend():
     stones = [s for s in (data.get("stones") or []) if s.get("pred")]
     area = data.get("area") or {}
     inputs = data.get("inputs") or {}
-    quality = data.get("quality") or {}
+    requirements = data.get("requirements") or {}
     if not stones:
         return jsonify({"ok": False, "error": "没有可推荐的矸石（请先完成成分预测）"}), 400
-
-    cfg = get_llm_config()
-    override = data.get("llm") or {}
-    if override.get("api_key"):
-        cfg["api_key"] = override["api_key"].strip()
-        cfg["configured"] = True
-    if override.get("base_url"):
-        cfg["base_url"] = override["base_url"].rstrip("/")
-    if override.get("model"):
-        cfg["model"] = override["model"]
-
-    result = None
-    err = None
-    if cfg.get("configured") and data.get("use_llm", True):
-        try:
-            result = llm_recommend(stones, area, inputs, quality, cfg)
-        except Exception as exc:
-            err = str(exc)
-            traceback.print_exc()
-    if result is None:
-        result = offline_recommend(stones, area, inputs)
-        result["fallback_reason"] = err or ("未配置 API Key，使用离线知识库" if not cfg.get("configured") else "")
-    # 在线结果也补齐逐石物性/比值/主导特征，保证第三步卡片与离线模式同样可解释。
-    by_id = {s.get("id"): s for s in stones}
-    for r in result.get("stones", []):
-        s = by_id.get(r.get("id"))
-        if not s:
-            continue
-        r.setdefault("feature", s.get("feature") or {})
-        if not r.get("ratios") or not r.get("regime"):
-            preds = {k: v["value"] for k, v in (s.get("pred") or {}).items()}
-            st_in = s.get("inputs") or inputs or {}
-            for key, src in (("LOI", "LOI烧失量"), ("SO3", "SO3"), ("K2O", "K2O"), ("Na2O", "Na2O")):
-                val = _num(st_in.get(src))
-                if val is not None:
-                    preds[key] = val
-            ratios = composition_ratios(preds)
-            preds.update(ratios)
-            r.setdefault("ratios", {k: ratios[k] for k in ("SI_AL", "CA_SI", "FE_AL", "LOI_ASH")})
-            r.setdefault("regime", dominant_regime(preds))
-    return jsonify(result)
+    try:
+        result = recommend_stones_v3(stones, area, inputs, requirements)
+        return jsonify(_json_safe(result))
+    except Exception as exc:
+        traceback.print_exc()
+        return jsonify({"ok": False, "error": str(exc)}), 500
 
 
 @app.route("/api/areas", methods=["GET", "POST"])
@@ -1183,7 +1472,9 @@ def api_areas():
 
 @app.route("/api/kb")
 def api_kb():
-    return jsonify({"ok": True, "entries": load_process_kb()})
+    kb = load_kb_v3()
+    return jsonify({"ok": True, "entries": kb.get("entries", []),
+                    "risk_rules": kb.get("risk_rules", []), "version": kb.get("version", "")})
 
 
 @app.errorhandler(413)
@@ -1225,7 +1516,8 @@ def main():
     print("  煤矸石识别 · 成分预测 · 工艺推荐  |  大创中期 demo")
     print("=" * 72)
     load_models()
-    print("[INFO] 成分模型已加载：", ", ".join(app_state["models"].keys()))
+    print("[INFO] 成分模型已加载：", ", ".join(app_state["models"].keys()),
+          "| source =", app_state.get("model_source"))
     if not args.no_warmup:
         try:
             get_yolo()
@@ -1234,7 +1526,9 @@ def main():
     cfg = get_llm_config()
     print(f"[INFO] LLM：{cfg['model']} @ {cfg['base_url']} "
           f"{'（已配置 Key）' if cfg['configured'] else '（未配置，将用离线知识库）'}")
-    print(f"[INFO] 访问：http://{args.host}:{args.port}")
+    print(f"[INFO] 知识库：{len(load_kb_v3().get('entries', []))} 条 R01~R12")
+    print(f"[INFO] 端口二：http://{args.host}:{args.port}/")
+    print(f"[INFO] 端口一：http://{args.host}:{args.port}/precision")
     print("=" * 72)
     if args.open:
         threading.Timer(1.2, lambda: open_browser(f"http://{args.host}:{args.port}/")).start()

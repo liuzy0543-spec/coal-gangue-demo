@@ -1,0 +1,58 @@
+{
+  "ok": true,
+  "checks": [
+    {
+      "name": "服务健康",
+      "ok": true,
+      "detail": "models=['SiO2', 'Al2O3', 'Fe2O3', 'CaO'] kb=12"
+    },
+    {
+      "name": "端口二图像识别",
+      "ok": true,
+      "detail": "5 个目标 / 3 块矸石"
+    },
+    {
+      "name": "端口二四氧化物预测",
+      "ok": true,
+      "detail": "3 行；SiO2 R2=0.7196019572007124"
+    },
+    {
+      "name": "端口二 R01~R12 推荐",
+      "ok": true,
+      "detail": [
+        "R12",
+        "R09",
+        "R06"
+      ]
+    },
+    {
+      "name": "端口一精准匹配",
+      "ok": true,
+      "detail": "R12 · 破碎粉磨+燃煤/生物质耦合掺烧（发电与热能回收） · 8 工序 · 2 风险"
+    },
+    {
+      "name": "高硫强酸性拦截",
+      "ok": true,
+      "detail": "已触发；主推 R12；blocked=['R01', 'R10', 'R06']"
+    }
+  ],
+  "health": {
+    "kb_count": 12,
+    "kb_version": "2026-11-01.1",
+    "model_source": "models_v2",
+    "models": [
+      "SiO2",
+      "Al2O3",
+      "Fe2O3",
+      "CaO"
+    ],
+    "ok": true,
+    "ports": {
+      "api": "/api",
+      "port1": "/precision",
+      "port2": "/"
+    },
+    "ready": true,
+    "yolo_ready": true
+  }
+}

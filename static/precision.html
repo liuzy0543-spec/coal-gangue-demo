@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>端口一 · 化验单精准匹配 · 煤矸石智能匹配平台</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛏</text></svg>">
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">⛏</div>
+      <div>
+        <h1>煤矸石 <span>智能匹配平台 · 双端口</span></h1>
+        <p>Port 1 · 化验单精准匹配 / R01~R12 知识库</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <a class="btn sm ghost" href="/">← 端口二 · 视觉粗筛</a>
+      <span class="chip" id="chip-kb"><i class="dot"></i>知识库 <b>—</b></span>
+      <span class="chip" id="chip-model"><i class="dot"></i>规则引擎 <b>在线</b></span>
+    </div>
+  </header>
+
+  <section class="precision-hero">
+    <div>
+      <div class="eyebrow">PORT 1 · PRECISION CHEMISTRY</div>
+      <h2>把化验单和工艺要求，直接变成可执行方案</h2>
+      <p>输入 XRF 主量、工业分析、XRD 与环保指标；系统先做含硫/高钙/重金属风险拦截，再从 R01~R12 中匹配路线、八工序和参数，并给出相似标杆案例。</p>
+    </div>
+    <div class="hero-stat">
+      <b id="hero-routes">12</b><span>条标准路线</span>
+      <b id="hero-rules">8</b><span>条风险规则</span>
+    </div>
+  </section>
+
+  <div class="grid-2 wide-left precision-grid">
+    <section class="card">
+      <div class="card-head">
+        <h2><span class="ic">▣</span>化验单 / 工艺要求</h2>
+        <span class="sub" id="form-sub">载入示例后可一键修改</span>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label><b>载入库内真实样品</b><span class="hint">用于快速演示，所有字段仍可手改</span></label>
+          <div style="display:flex;gap:8px">
+            <select id="sample-select" style="flex:1"></select>
+            <button class="btn sm" id="btn-load-sample">载入</button>
+          </div>
+          <div class="hint" id="sample-note">—</div>
+        </div>
+
+        <form id="precision-form">
+          <div class="form-section">
+            <div class="section-label">01 · 样品与产地</div>
+            <div class="chem-grid">
+              <div class="field"><label><b>省份</b></label><input id="p-province" value="山西"></div>
+              <div class="field"><label><b>城市</b></label><input id="p-city" value="太原市"></div>
+              <div class="field"><label><b>煤田 / 矿区</b></label><input id="p-coalfield" value="西山煤田"></div>
+              <div class="field"><label><b>样品状态</b></label>
+                <select id="p-source"><option>新鲜原矸(RAW)</option><option>洗选煤矸石(WASHED)</option><option>自燃煤矸石(BURNT)</option><option>实验室煅烧或改性矸(MODIFIED)</option><option>风化陈化矸石(WEATHERED)</option></select>
+              </div>
+              <div class="field"><label><b>外观颜色</b></label><input id="p-color" value="灰黑色/深灰色"></div>
+              <div class="field"><label><b>岩石学类型</b></label><input id="p-petrology" value="高岭石型(粘土岩类)"></div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-label">02 · XRF 化学成分（wt%）</div>
+            <div class="chem-grid">
+              <div class="field"><label><b>SiO₂</b></label><input type="number" id="c-SiO2" step="0.01" value="58"></div>
+              <div class="field"><label><b>Al₂O₃</b></label><input type="number" id="c-Al2O3" step="0.01" value="22"></div>
+              <div class="field"><label><b>Fe₂O₃</b></label><input type="number" id="c-Fe2O3" step="0.01" value="6"></div>
+              <div class="field"><label><b>CaO</b></label><input type="number" id="c-CaO" step="0.01" value="2.2"></div>
+              <div class="field"><label><b>MgO</b></label><input type="number" id="c-MgO" step="0.01" value="1.5"></div>
+              <div class="field"><label><b>SO₃</b></label><input type="number" id="c-SO3" step="0.01" value="1.0"></div>
+              <div class="field"><label><b>K₂O</b></label><input type="number" id="c-K2O" step="0.01" value="1.8"></div>
+              <div class="field"><label><b>Na₂O</b></label><input type="number" id="c-Na2O" step="0.01" value="0.5"></div>
+              <div class="field"><label><b>LOI 烧失量</b></label><input type="number" id="c-LOI" step="0.01" value="6"></div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-label">03 · 工业分析与热工</div>
+            <div class="chem-grid">
+              <div class="field"><label><b>灰分 Aad</b></label><input type="number" id="i-ash" step="0.1" value="78"></div>
+              <div class="field"><label><b>挥发分 Vad</b></label><input type="number" id="i-volatile" step="0.1" value="14"></div>
+              <div class="field"><label><b>固定碳 FC</b></label><input type="number" id="i-FC" step="0.1" value="6"></div>
+              <div class="field"><label><b>全硫 St</b></label><input type="number" id="i-St" step="0.01" value="1.2"></div>
+              <div class="field"><label><b>发热量 Qnet,ar</b></label><input type="number" id="i-Qnet" step="0.01" value="3.5"></div>
+            </div>
+          </div>
+
+          <details class="form-details" open>
+            <summary>04 · XRD 矿物定量（可选）<span>提高 Al₂O₃ / Fe₂O₃ / CaO 判据</span></summary>
+            <div class="chem-grid" style="margin-top:8px">
+              <div class="field"><label><b>高岭石</b></label><input type="number" id="x-kaolinite" step="0.1" value="50"></div>
+              <div class="field"><label><b>石英</b></label><input type="number" id="x-quartz" step="0.1" value="32"></div>
+              <div class="field"><label><b>伊利石/云母</b></label><input type="number" id="x-illite" step="0.1" value="10"></div>
+              <div class="field"><label><b>绿泥石/蒙脱石</b></label><input type="number" id="x-chlorite" step="0.1" value="3"></div>
+              <div class="field"><label><b>方解石/白云石</b></label><input type="number" id="x-calcite" step="0.1" value="3"></div>
+              <div class="field"><label><b>黄铁矿/菱铁矿</b></label><input type="number" id="x-pyrite" step="0.1" value="2"></div>
+            </div>
+          </details>
+
+          <div class="form-section">
+            <div class="section-label">05 · 环保与工程红线</div>
+            <div class="chem-grid">
+              <div class="field"><label><b>浸出液 pH</b></label><input type="number" id="e-pH" step="0.1" value="7.5"></div>
+              <div class="field"><label><b>重金属浸出</b></label>
+                <select id="e-heavy"><option>符合I类一般工业固废(可生态回填/农用)</option><option>II类需控</option><option>超标危废</option></select>
+              </div>
+              <div class="field"><label><b>放射性</b></label>
+                <select id="e-radio"><option>符合A类建材(产销与使用范围不受限)</option><option>IRa>1.0</option><option>超标</option></select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-label">06 · 处理工艺与硬性要求</div>
+            <div class="chem-grid">
+              <div class="field"><label><b>优先路线</b></label>
+                <select id="r-desired"><option value="">自动匹配（推荐）</option></select>
+              </div>
+              <div class="field"><label><b>决策偏好</b></label>
+                <select id="r-priority"><option value="balanced">综合平衡</option><option value="cost">低成本/大宗消纳</option><option value="carbon">低碳/固碳</option><option value="high_value">高值化</option><option value="strength">高强度建材</option></select>
+              </div>
+              <div class="field"><label><b>配套脱硫/中和</b></label>
+                <select id="r-sulfur"><option value="false">否（默认拦截高硫直用）</option><option value="true">是，已有脱硫/中和</option></select>
+              </div>
+              <div class="field"><label><b>细磨/消解能力</b></label>
+                <select id="r-fine"><option value="false">否（CaO>2.5 时拦截制砖）</option><option value="true">是，可磨细/消解</option></select>
+              </div>
+            </div>
+            <div class="notice cyan" style="margin-top:10px"><span>ⓘ</span><span>路线要求、八工序、参数与环保红线会一并进入最终推荐；不是只按成分排序。</span></div>
+          </div>
+
+          <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px">
+            <button type="button" class="btn primary" id="btn-run" style="flex:1;min-width:180px">⚡ 生成精准方案</button>
+            <button type="button" class="btn ghost" id="btn-reset">重置示例</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="card result-card">
+      <div class="card-head">
+        <h2><span class="ic">✦</span>精准匹配结果</h2>
+        <span class="sub" id="result-sub">等待输入</span>
+      </div>
+      <div class="card-body" id="precision-result">
+        <div class="pred-empty" style="min-height:300px"><div class="big">⚗</div>载入示例或填写化验单<br>点击「生成精准方案」查看 R01~R12 推荐</div>
+      </div>
+    </section>
+  </div>
+
+  <div class="footer-note">
+    <span>数据底座：635 条真实煤矸石记录 / R01~R12 知识库 / 328 条四目标建模域</span>
+    <span><a href="/">端口二 · 视觉粗筛</a> · <a href="/api/health" target="_blank">API 健康检查</a></span>
+  </div>
+</div>
+<script src="/static/precision.js"></script>
+</body>
+</html>
