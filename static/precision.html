@@ -107,10 +107,11 @@
       <div class="card-body">
         <div class="p1-progress"><div id="p1-progress-bar"></div></div>
         <div id="p1-stone-head" class="p1-stone-head"></div>
+        <div class="p1-module-tabs" id="p1-module-tabs"></div>
         <div class="notice" style="margin-bottom:10px"><span>✱</span><span>带 <b>*</b> 的指标为必填；全部填写完成后才允许生成方案。测试阶段已自动带入库内默认值，可直接改。</span></div>
 
         <form id="p1-form">
-          <div class="form-section">
+          <div class="form-section p1-module" data-p1-module="0">
             <div class="section-label">01 · 样品与产地</div>
             <div class="chem-grid">
               <div class="field"><label><b>省份 *</b></label><input id="p1-province" value="山西"></div>
@@ -124,7 +125,7 @@
             </div>
           </div>
 
-          <div class="form-section">
+          <div class="form-section p1-module" data-p1-module="1">
             <div class="section-label">02 · XRF 化学成分（wt%）</div>
             <div class="chem-grid">
               <div class="field"><label><b>SiO₂ *</b></label><input type="number" id="p1-c-SiO2" step="0.01" min="0" max="95"></div>
@@ -139,7 +140,7 @@
             </div>
           </div>
 
-          <div class="form-section">
+          <div class="form-section p1-module" data-p1-module="2">
             <div class="section-label">03 · 工业分析与热工</div>
             <div class="chem-grid">
               <div class="field"><label><b>灰分 Aad *</b></label><input type="number" id="p1-i-ash" step="0.1" min="0" max="98"></div>
@@ -150,7 +151,7 @@
             </div>
           </div>
 
-          <details class="form-details" open>
+          <details class="form-details p1-module" data-p1-module="3" open>
             <summary>04 · XRD 矿物定量（必填；无 XRD 请填 0，不可留空）<span>全部实验报告字段必填</span></summary>
             <div class="chem-grid" style="margin-top:8px">
               <div class="field"><label><b>高岭石 *</b></label><input type="number" id="p1-x-kaolinite" step="0.1" min="0" max="100"></div>
@@ -162,7 +163,7 @@
             </div>
           </details>
 
-          <div class="form-section">
+          <div class="form-section p1-module" data-p1-module="4">
             <div class="section-label">05 · 环保与工程红线</div>
             <div class="chem-grid">
               <div class="field"><label><b>浸出液 pH *</b></label><input type="number" id="p1-e-pH" step="0.1" min="0" max="14"></div>
@@ -175,7 +176,7 @@
             </div>
           </div>
 
-          <div class="form-section">
+          <div class="form-section p1-module" data-p1-module="5">
             <div class="section-label">06 · 处理要求（可选）</div>
             <div class="chem-grid">
               <div class="field"><label><b>优先路线</b></label><select id="p1-r-desired"><option value="">自动匹配（推荐）</option></select></div>
@@ -187,9 +188,9 @@
 
           <div class="notice" id="p1-form-error" style="display:none;margin-top:10px"></div>
           <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px">
-            <button type="button" class="btn ghost" id="p1-prev">← 上一块</button>
-            <button type="button" class="btn primary" id="p1-save-next" style="flex:1;min-width:180px">保存并下一块 →</button>
-            <button type="button" class="btn primary" id="p1-generate" style="display:none;flex:1;min-width:220px">✓ 完成并生成处理方案</button>
+            <button type="button" class="btn ghost" id="p1-prev">← 上一步</button>
+            <button type="button" class="btn primary" id="p1-save-next" style="flex:1;min-width:180px">下一步 →</button>
+            <button type="button" class="btn primary" id="p1-generate" style="display:none;flex:1;min-width:240px">进入处理方案 →</button>
           </div>
         </form>
       </div>

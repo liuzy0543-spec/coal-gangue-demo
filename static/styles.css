@@ -584,3 +584,10 @@ td.num, th.num { font-family: var(--mono); text-align: right; }
 .demo-card b { display:block; color:var(--ink); font-size:11px; line-height:1.4; }
 .demo-card small { display:block; color:var(--dim); font-size:9.5px; line-height:1.5; }
 @media (max-width:760px) { .demo-grid { grid-template-columns:1fr; } }
+.p1-module { display:none; }
+.p1-module.active { display:block; }
+.p1-module-tabs { display:flex; gap:6px; flex-wrap:wrap; margin:0 0 12px; }
+.p1-module-tab { padding:5px 9px; border:1px solid var(--line); border-radius:999px; color:var(--dim); font-size:10px; }
+.p1-module-tab.active { border-color:rgba(56,189,248,.55); color:#7dd3fc; background:rgba(56,189,248,.08); }
+.p1-module-tab.done { color:#86efac; border-color:rgba(34,197,94,.3); }
+@media (max-width:760px) { .p1-module-tabs { gap:4px; } }

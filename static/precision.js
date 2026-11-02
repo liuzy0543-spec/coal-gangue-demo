@@ -1,7 +1,7 @@
 /* 端口一 · 图片识别 → 逐石必填实验报告 → 逐石处理方案 */
 const P = {
   template: null, samples: [], detect: null, gangue: [], forms: [],
-  idx: 0, step: 1, results: [], thinkingTimer: null,
+  idx: 0, module: 0, step: 1, results: [], thinkingTimer: null,
 };
 
 const REQUIRED = [
@@ -13,6 +13,28 @@ const REQUIRED = [
   ["p1-x-kaolinite", "高岭石"], ["p1-x-quartz", "石英"], ["p1-x-illite", "伊利石"],
   ["p1-x-chlorite", "绿泥石"], ["p1-x-calcite", "方解石"], ["p1-x-pyrite", "黄铁矿"],
 ];
+
+const MODULES = [
+  { label: "样品与产地", fields: [
+    ["p1-province", "省份"], ["p1-city", "城市"], ["p1-coalfield", "煤田/矿区"],
+    ["p1-source", "样品状态"], ["p1-color", "外观颜色"], ["p1-petrology", "岩石学类型"],
+  ]},
+  { label: "XRF 化学成分", fields: [
+    ["p1-c-SiO2", "SiO₂"], ["p1-c-Al2O3", "Al₂O₃"], ["p1-c-Fe2O3", "Fe₂O₃"], ["p1-c-CaO", "CaO"],
+    ["p1-c-MgO", "MgO"], ["p1-c-SO3", "SO₃"], ["p1-c-K2O", "K₂O"], ["p1-c-Na2O", "Na₂O"], ["p1-c-LOI", "LOI"],
+  ]},
+  { label: "工业分析", fields: [
+    ["p1-i-ash", "灰分"], ["p1-i-volatile", "挥发分"], ["p1-i-FC", "固定碳"],
+    ["p1-i-St", "全硫"], ["p1-i-Qnet", "发热量"],
+  ]},
+  { label: "XRD 矿物", fields: [
+    ["p1-x-kaolinite", "高岭石"], ["p1-x-quartz", "石英"], ["p1-x-illite", "伊利石"],
+    ["p1-x-chlorite", "绿泥石"], ["p1-x-calcite", "方解石"], ["p1-x-pyrite", "黄铁矿"],
+  ]},
+  { label: "环保红线", fields: [["p1-e-pH", "浸出 pH"]] },
+  { label: "处理要求", fields: [] },
+];
+
 const SUPPORTED = ["jpg", "jpeg", "png", "bmp", "webp", "tif", "tiff"];
 
 function $(s) { return document.querySelector(s); }
@@ -178,13 +200,12 @@ async function loadDemoImage(path) {
 }
 
 /* ---------------- 逐石表单 ---------------- */
-function fillForm(index) {
+function fillForm(index, module = P.module || 0) {
   if (!P.forms.length) return;
   P.idx = Math.max(0, Math.min(index, P.forms.length - 1));
+  P.module = Math.max(0, Math.min(module, MODULES.length - 1));
   const f = P.forms[P.idx];
   const d = f.data;
-  $("#p1-form-sub").textContent = `第 ${P.idx + 1} / ${P.forms.length} 块 · ${f.stone.id}`;
-  $("#p1-progress-bar").style.width = `${((P.idx + 1) / P.forms.length) * 100}%`;
   const feat = f.stone.feature || {};
   const chips = ["D", "L", "G", "T", "S"].map((k) => feat[k] ? `<span class="phys-chip">${esc(feat[k].code)} ${esc(feat[k].name)}</span>` : "").join("");
   $("#p1-stone-head").innerHTML = `<span class="id-badge">${esc(f.stone.id)}</span>
@@ -204,10 +225,30 @@ function fillForm(index) {
   setVal("p1-r-priority", d.requirements.priority || "balanced");
   setVal("p1-r-sulfur", String(!!d.requirements.sulfur_control));
   setVal("p1-r-fine", String(!!d.requirements.fine_grinding));
+  renderModule();
+}
+
+function renderModule() {
+  if (!P.forms.length) return;
+  const f = P.forms[P.idx];
+  const total = MODULES.length;
+  document.querySelectorAll("#p1-form .p1-module").forEach((el) => {
+    const active = Number(el.dataset.p1Module) === P.module;
+    el.classList.toggle("active", active);
+    if (el.tagName === "DETAILS" && active) el.open = true;
+  });
+  $("#p1-module-tabs").innerHTML = MODULES.map((m, i) => {
+    const cls = i === P.module ? "active" : (i < P.module ? "done" : "");
+    return `<span class="p1-module-tab ${cls}">${String(i + 1).padStart(2, "0")} ${esc(m.label)}</span>`;
+  }).join("");
+  $("#p1-form-sub").textContent = `第 ${P.idx + 1} / ${P.forms.length} 块 · ${f.stone.id} · 模块 ${P.module + 1} / ${total} · ${MODULES[P.module].label}`;
+  const done = P.idx * total + P.module + 1;
+  $("#p1-progress-bar").style.width = `${(done / (P.forms.length * total)) * 100}%`;
+  $("#p1-prev").disabled = P.idx === 0 && P.module === 0;
+  const final = P.idx === P.forms.length - 1 && P.module === total - 1;
+  $("#p1-save-next").style.display = final ? "none" : "";
+  $("#p1-generate").style.display = final ? "" : "none";
   $("#p1-form-error").style.display = "none";
-  $("#p1-prev").disabled = P.idx === 0;
-  $("#p1-save-next").style.display = P.idx === P.forms.length - 1 ? "none" : "";
-  $("#p1-generate").style.display = P.idx === P.forms.length - 1 ? "" : "none";
 }
 
 function readForm() {
@@ -247,19 +288,58 @@ function validateCurrent(show = true) {
   return false;
 }
 
+function validateModule(moduleIndex = P.module, show = true) {
+  const missing = [];
+  (MODULES[moduleIndex].fields || []).forEach(([id, label]) => {
+    const el = $("#" + id);
+    if (!el) return;
+    const v = el.value.trim();
+    if (v === "") missing.push(label);
+    else if (el.type === "number" && !Number.isFinite(Number(v))) missing.push(label);
+  });
+  if (!missing.length) return true;
+  if (show) {
+    const el = $("#p1-form-error");
+    el.style.display = "";
+    el.className = "notice";
+    el.innerHTML = `<span>⚠</span><span>第 ${P.idx + 1} 块 · 模块 ${moduleIndex + 1}「${esc(MODULES[moduleIndex].label)}」缺少必填项：<b>${missing.map(esc).join("、")}</b>。本模块填完才能进入下一个子表。</span>`;
+    toast(`请先补全模块 ${moduleIndex + 1}：${missing.slice(0, 4).join("、")}${missing.length > 4 ? "…" : ""}`, "err");
+  }
+  return false;
+}
+
 function saveCurrent(validate = true) {
-  if (validate && !validateCurrent(true)) return false;
+  if (validate && !validateModule(P.module, true)) return false;
   P.forms[P.idx].data = readForm();
   return true;
 }
 
 function nextForm() {
   if (!saveCurrent(true)) return;
-  if (P.idx < P.forms.length - 1) { P.idx += 1; fillForm(P.idx); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  if (P.module < MODULES.length - 1) {
+    P.module += 1;
+    renderModule();
+  } else if (P.idx < P.forms.length - 1) {
+    P.idx += 1;
+    P.module = 0;
+    fillForm(P.idx, 0);
+  } else {
+    generatePlans();
+    return;
+  }
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 function prevForm() {
   saveCurrent(false);
-  if (P.idx > 0) { P.idx -= 1; fillForm(P.idx); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  if (P.module > 0) {
+    P.module -= 1;
+    renderModule();
+  } else if (P.idx > 0) {
+    P.idx -= 1;
+    P.module = MODULES.length - 1;
+    fillForm(P.idx, P.module);
+  }
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function validateAll() {
@@ -529,7 +609,7 @@ async function init() {
   drop.addEventListener("drop", (e) => { const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) uploadFile(f); });
   $("#p1-file").addEventListener("change", (e) => { const f = e.target.files && e.target.files[0]; if (f) uploadFile(f); });
   $("#p1-btn-clear").addEventListener("click", () => { $("#p1-image-box").style.display = "none"; $("#p1-drop").style.display = ""; $("#p1-file").value = ""; P.detect = null; P.gangue = []; P.forms = []; $("#p1-to-forms").disabled = true; $("#p1-stone-body").innerHTML = `<tr><td colspan="5"><div class="empty" style="min-height:160px;border:0">上传图片后显示编号、类别和 D/L/G/T/S</div></td></tr>`; });
-  $("#p1-to-forms").addEventListener("click", () => { if (!P.forms.length) { toast("没有可填写报告的矸石", "err"); return; } P.idx = 0; showStep(2); });
+  $("#p1-to-forms").addEventListener("click", () => { if (!P.forms.length) { toast("没有可填写报告的矸石", "err"); return; } P.idx = 0; P.module = 0; showStep(2); });
   $("#p1-prev").addEventListener("click", prevForm);
   $("#p1-save-next").addEventListener("click", nextForm);
   $("#p1-generate").addEventListener("click", generatePlans);
