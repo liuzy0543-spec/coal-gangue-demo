@@ -6,6 +6,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -20,6 +21,22 @@ def call(path, payload=None, timeout=120):
         req = urllib.request.Request(url, data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
                                      headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
+def upload_detect(rel="tests/images/case_a.jpg", conf="undefined"):
+    boundary = "----DSH" + uuid.uuid4().hex
+    img = (ROOT / rel).read_bytes()
+    parts = []
+    def field(name, value):
+        parts.append(f"--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n".encode())
+    field("conf", conf); field("iou", "0.45")
+    parts.append(f"--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"case_a.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n".encode() + img + b"\r\n")
+    parts.append(f"--{boundary}--\r\n".encode())
+    data = b"".join(parts)
+    req = urllib.request.Request(BASE + "/api/detect", data=data,
+                                 headers={"Content-Type": "multipart/form-data; boundary=" + boundary})
+    with urllib.request.urlopen(req, timeout=240) as r:
         return json.loads(r.read().decode("utf-8"))
 
 
@@ -55,6 +72,10 @@ def main():
         report["health"]["yolo_ready"] = True
         report["checks"].append({"name": "端口二图像识别", "ok": True,
                                  "detail": f"{detect.get('total')} 个目标 / {len(stones)} 块矸石"})
+        up = upload_detect(conf="undefined")
+        assert up.get("ok") and up.get("gangue_count", 0) > 0, "图片 multipart 上传失败（conf=undefined）"
+        report["checks"].append({"name": "端口一/二图片上传（多格式入口）", "ok": True,
+                                 "detail": f"multipart conf=undefined 兜底成功；{up.get('total')} 个目标 / {up.get('gangue_count')} 块矸石"})
 
         sample = samples[0]
         for i, s in enumerate(stones):
@@ -88,6 +109,16 @@ def main():
         assert p.get("route_code", "").startswith("R") and p.get("process_chain"), "端口一未返回完整方案"
         report["checks"].append({"name": "端口一精准匹配", "ok": True,
                                  "detail": f"{p.get('route_code')} · {p.get('name')} · {len(p.get('process_chain', []))} 工序 · {len(pr.get('risks', []))} 风险"})
+
+        batch_body = {"thinking_seconds": 0.1, "use_llm": False, "stones": [
+            {"id": "S01", "chemical": body["chemical"], "industrial": body["industrial"],
+             "xrd": body["xrd"], "environment": {}, "meta": body["meta"],
+             "requirements": body["requirements"]}
+        ]}
+        bt = call("/api/precision/batch", batch_body, timeout=120)
+        assert bt.get("ok") and bt.get("results") and bt["results"][0].get("primary", {}).get("process_chain"), "端口一批量方案失败"
+        report["checks"].append({"name": "端口一逐石批量方案", "ok": True,
+                                 "detail": f"{len(bt['results'])} 份；{bt['results'][0]['primary']['route_code']}；{len(bt['results'][0]['primary']['process_chain'])} 工序"})
 
         # Hard risk rule checks: high sulfur should be intercepted.
         risky = dict(body)

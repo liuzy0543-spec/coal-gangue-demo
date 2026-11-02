@@ -20,13 +20,16 @@
 - 预测后弹出逐石误差（`|预测−真实|/真实`），并显示模型整体 R²；
 - 用 R01~R12 知识库逐石推荐，先跑风险门控，再按成分/比值/物性排序。
 
-### 端口一 · 化验单精准匹配（http://127.0.0.1:7880/precision）
+### 端口一 · 实验报告精准匹配（http://127.0.0.1:7880/precision）
 
-- 直接填 XRF 主量、工业分析、XRD、pH/重金属/放射性、目标路线与工程要求（脱硫、细磨、成本/低碳/高值偏好）；
-- 输出：主推路线 + 置信度 + 匹配分、Top-3 备选、八工序链、关键参数、路线硬性要求、风险拦截、建议补检、同路线 kNN 相似案例；
-- 适合企业化验室、设计院、科研人员；不需要图像。
+1. **图片识别**：支持 JPG/JPEG/PNG/BMP/WEBP/TIF/TIFF 上传；YOLO 标出煤块/矸石并编号，只对矸石生成实验报告；
+2. **逐石必填表单**：一块一块填写，测试阶段自动带入库内默认值；XRF、工业分析、XRD、pH/重金属/放射性等全部必填（无 XRD 填 0），缺项会阻止生成方案；
+3. **逐石处理方案**：按图片编号顺序输出 R01~R12 路线、SVG 八工序数据流图、参数、路线要求和风险控制；**不显示“为什么选它”**；
+4. **双击方案**：打开本块实验指标（XRF/工业/XRD/环境）核对；
+5. **思考动画**：生成时显示“AI 正在根据知识库深度学习”、转圈和 2 秒进度条；
+6. **模型配置**：右上角「模型配置」可填智谱 API Key；默认免费 `glm-4.5-flash`，未配置则离线知识库。
 
-**界面截图**：[端口二逐石输入](outputs/shots/22_port2_inputs.png) ｜ [逐石误差弹窗](outputs/shots/23_port2_error.png) ｜ [端口二工艺分化](outputs/shots/24_port2_recommend.png) ｜ [端口一精准匹配](outputs/shots/20_precision_port1.png) ｜ [端口一高硫拦截](outputs/shots/21_precision_sulfur_risk.png)
+**界面截图**：[端口二逐石输入](outputs/shots/22_port2_inputs.png) ｜ [逐石误差弹窗](outputs/shots/23_port2_error.png) ｜ [端口二工艺分化](outputs/shots/24_port2_recommend.png) ｜ [端口一图片识别](outputs/shots/25_port1_upload.png) ｜ [端口一逐石表单](outputs/shots/26_port1_form.png) ｜ [端口一方案/数据流图](outputs/shots/27_port1_plan.png) ｜ [端口一思考动画](outputs/shots/28_port1_thinking.png)
 
 ---
 
@@ -116,8 +119,8 @@ python app.py
 
 1. 检查 Python / 依赖；
 2. 7880 未启动时自动启动后端；
-3. 运行 `scripts/verify_ports.py`：健康检查 + 端口二 识别/预测/推荐 + 端口一精准匹配 + 高硫强酸拦截；
-4. 通过后自动用 Edge 打开两个端口；
+3. 运行 `scripts/verify_ports.py`：健康检查 + 端口二 识别/预测/推荐 + 端口一精准匹配/批量方案 + 高硫强酸拦截；
+4. 优先用 **360 浏览器** 打开两个端口（找不到时回退 Edge/系统默认）；
 5. 结果写入 `outputs/verify_ports.json`。
 
 也可以手动：
@@ -125,6 +128,30 @@ python app.py
 ```bat
 python scripts/verify_ports.py
 ```
+
+### 模型配置（GLM-4.5-Flash）
+
+默认配置在项目根目录 **`config.json`**（已被 gitignore，不会上传）：
+
+```json
+{
+  "provider": "zhipu",
+  "base_url": "https://open.bigmodel.cn/api/paas/v4",
+  "model": "glm-4.5-flash",
+  "protocol": "openai",
+  "api_key": "你的智谱 API Key"
+}
+```
+
+也可以不建文件，使用环境变量：
+
+```bat
+set GLM_API_KEY=你的Key
+set GLM_MODEL=glm-4.5-flash
+set GLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4
+```
+
+端口一右上角「模型配置」也可保存 Key，底层同样写入 `config.json`。未配置时自动走离线 R01~R12 知识库，功能不受影响。
 
 ---
 

@@ -1169,6 +1169,69 @@ def _json_safe(obj):
     return obj
 
 
+def _extract_json(text: str):
+    t = (text or "").strip()
+    if t.startswith("```"):
+        t = re.sub(r"^```(?:json)?\s*", "", t)
+        t = re.sub(r"\s*```$", "", t)
+    try:
+        return json.loads(t)
+    except Exception:
+        m = re.search(r"\{.*\}", t, re.S)
+        if m:
+            try:
+                return json.loads(m.group(0))
+            except Exception:
+                return None
+    return None
+
+
+def llm_precision_plan(cfg: Dict, values: Dict, shaped: Dict, requirements: Dict) -> Dict:
+    """Call GLM for a final plan only; deliberately exclude rationale/reasoning in the output schema."""
+    p = shaped.get("primary", {})
+    prompt = {
+        "task": "根据已确定的煤矸石处理路线，输出可执行处理方案",
+        "rules": [
+            "只输出处理方案，不解释为什么选这条路线，不输出推理过程",
+            "不得编造未给出的标准号、检测值或经济指标",
+            "按给定路线和工序链组织，不要改路线",
+        ],
+        "route": {"code": p.get("route_code"), "name": p.get("name"), "standard": p.get("standard")},
+        "process_chain": p.get("process_chain") or [],
+        "parameters": p.get("parameters") or {},
+        "product": p.get("products"),
+        "route_requirements": p.get("requirements") or [],
+        "risk_findings": [{"title": r.get("title"), "message": r.get("message")} for r in shaped.get("risks", [])],
+        "indicators": values,
+        "user_requirements": requirements,
+        "output_schema": {
+            "summary": "一句到两句方案概述（只写做什么）",
+            "process_chain": ["八工序，按顺序"],
+            "parameters": {"参数名": "参数值"},
+            "quality_control": ["质量控制要点"],
+            "risk_control": ["风险控制/环保措施"],
+            "required_tests": ["必须补检项"],
+        },
+    }
+    msg = [
+        {"role": "system", "content": "你是煤矸石处理工艺工程师。严格按已确定路线输出 JSON；只写处理方案，不写原因、不写分析、不写推理。"},
+        {"role": "user", "content": json.dumps(prompt, ensure_ascii=False)},
+    ]
+    res = call_llm(cfg, msg, timeout=90)
+    obj = _extract_json(res.get("content", ""))
+    if not isinstance(obj, dict):
+        raise RuntimeError("模型返回不是合法 JSON")
+    out = {}
+    for k in ("summary", "process_chain", "parameters", "quality_control", "risk_control", "required_tests"):
+        if k in obj:
+            out[k] = obj[k]
+    if not out.get("summary") and not out.get("process_chain"):
+        raise RuntimeError("模型未返回方案字段")
+    out["_model"] = cfg.get("model")
+    out["_latency"] = res.get("latency")
+    return out
+
+
 def _precision_values(data: Dict) -> Dict:
     """Flatten the precision form; accepts chemical/industrial/xrd/environment or flat keys."""
     flat = {}
@@ -1273,9 +1336,72 @@ def api_precision_template():
                  "Shanxi-Shuozhou-ZhouMingkai-SizeActivity", "Shanxi-Jincheng-YangZhiqiang-NonClinker",
                  "Shanxi-Yuncheng-GuoWenchao-AluminaExtraction"]
     samples.sort(key=lambda x: preferred.index(x["id"]) if x["id"] in preferred else 99)
+    cfg = get_llm_config()
     return jsonify({"ok": True, "samples": samples, "routes": kb.get("entries", []),
                     "risk_rules": kb.get("risk_rules", []), "version": kb.get("version", ""),
-                    "metrics": app_state.get("metrics", {})})
+                    "metrics": app_state.get("metrics", {}),
+                    "llm": {"configured": cfg.get("configured", False), "model": cfg.get("model"),
+                            "base_url": cfg.get("base_url"), "provider": cfg.get("provider")}})
+
+
+@app.route("/api/precision/batch", methods=["POST"])
+def api_precision_batch():
+    data = request.get_json(force=True, silent=True) or {}
+    stones = data.get("stones") or []
+    if not stones:
+        return jsonify({"ok": False, "error": "没有可生成方案的实验报告"}), 400
+    try:
+        sec = data.get("thinking_seconds", 2)
+        try:
+            sec = min(5.0, max(0.0, float(sec)))
+        except Exception:
+            sec = 2.0
+        if sec:
+            time.sleep(sec)
+        cfg = get_llm_config()
+        override = data.get("llm") or {}
+        if override.get("api_key"):
+            cfg["api_key"] = override["api_key"].strip()
+            cfg["configured"] = True
+        if override.get("base_url"):
+            cfg["base_url"] = override["base_url"].rstrip("/")
+        if override.get("model"):
+            cfg["model"] = override["model"]
+        use_llm = bool(data.get("use_llm", True)) and bool(cfg.get("configured"))
+        results = []
+        for i, item in enumerate(stones):
+            values = _precision_values(item)
+            codes = []
+            for k in ("D", "L", "G", "T", "S"):
+                fk = (item.get("feature") or {}).get(k)
+                if isinstance(fk, dict) and fk.get("code"):
+                    codes.append(fk["code"])
+            values["_codes"] = codes
+            req = dict(item.get("requirements") or {})
+            req["port"] = "precision"
+            route = kb_recommend(values, req)
+            shaped = _shape_route(route, item.get("id") or f"P{i+1:02d}", item.get("feature"), values)
+            shaped["similar_cases"] = find_similar_cases(values, shaped["primary"].get("route_code", ""), 3)
+            shaped["values"] = {k: v for k, v in values.items() if k != "_codes"}
+            shaped["requirements_echo"] = req
+            # 端口一只给方案，不回传“为什么选它”的理由/机理字段
+            shaped.get("primary", {}).pop("why", None)
+            shaped.get("primary", {}).pop("basis", None)
+            for alt in shaped.get("secondary", []):
+                alt.pop("why", None)
+            if use_llm:
+                try:
+                    shaped["llm_plan"] = llm_precision_plan(cfg, values, shaped, req)
+                except Exception as exc:
+                    shaped["llm_error"] = str(exc)
+            results.append(shaped)
+        return jsonify(_json_safe({"ok": True, "results": results,
+                                   "llm_configured": bool(cfg.get("configured")),
+                                   "llm_model": cfg.get("model") if cfg.get("configured") else "",
+                                   "thinking_seconds": sec}))
+    except Exception as exc:
+        traceback.print_exc()
+        return jsonify({"ok": False, "error": str(exc)}), 500
 
 
 @app.route("/api/precision/recommend", methods=["POST"])
@@ -1497,15 +1623,22 @@ def too_large(_):
 
 
 def open_browser(url: str) -> bool:
-    """优先用 Microsoft Edge 打开；失败再回退系统默认浏览器。"""
-    edge_candidates = [
-        os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")
-        + r"\Microsoft\Edge\Application\msedge.exe",
-        os.environ.get("ProgramFiles", r"C:\Program Files")
-        + r"\Microsoft\Edge\Application\msedge.exe",
+    """优先 360 浏览器（用户默认），其次 Edge，最后系统默认浏览器。"""
+    local = os.environ.get("LOCALAPPDATA", "")
+    pf = os.environ.get("ProgramFiles", r"C:\Program Files")
+    pf86 = os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")
+    candidates = [
+        os.path.join(local, r"360Chrome\Chrome\Application\360chrome.exe") if local else "",
+        os.path.join(pf86, r"360\360Chrome\Chrome\Application\360chrome.exe"),
+        os.path.join(pf, r"360\360Chrome\Chrome\Application\360chrome.exe"),
+        os.path.join(local, r"360se6\Application\360se6.exe") if local else "",
+        os.path.join(pf86, r"360\360se6\Application\360se6.exe"),
+        os.path.join(pf, r"360\360se6\Application\360se6.exe"),
+        os.path.join(pf86, r"Microsoft\Edge\Application\msedge.exe"),
+        os.path.join(pf, r"Microsoft\Edge\Application\msedge.exe"),
     ]
-    for exe in edge_candidates:
-        if Path(exe).exists():
+    for exe in candidates:
+        if exe and Path(exe).exists():
             try:
                 subprocess.Popen([exe, url])
                 return True

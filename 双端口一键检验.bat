@@ -47,12 +47,33 @@ if errorlevel 1 (
 
 echo.
 echo [3/3] 打开前端两个端口...
-set "EDGE=%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"
-if not exist "%EDGE%" set "EDGE=%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"
-if exist "%EDGE%" (
-  start "" "%EDGE%" "http://127.0.0.1:7880/"
+set "BROWSER="
+set "B360=%LOCALAPPDATA%\360Chrome\Chrome\Application\360chrome.exe"
+if exist "%B360%" set "BROWSER=%B360%"
+if not defined BROWSER (
+  set "B360=%ProgramFiles(x86)%\360\360Chrome\Chrome\Application\360chrome.exe"
+  if exist "%B360%" set "BROWSER=%B360%"
+)
+if not defined BROWSER (
+  set "B360=%ProgramFiles%\360\360Chrome\Chrome\Application\360chrome.exe"
+  if exist "%B360%" set "BROWSER=%B360%"
+)
+if not defined BROWSER (
+  set "B360=%LOCALAPPDATA%\360se6\Application\360se6.exe"
+  if exist "%B360%" set "BROWSER=%B360%"
+)
+if not defined BROWSER (
+  set "B360=%ProgramFiles(x86)%\360\360se6\Application\360se6.exe"
+  if exist "%B360%" set "BROWSER=%B360%"
+)
+if not defined BROWSER (
+  set "B360=%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"
+  if exist "%B360%" set "BROWSER=%B360%"
+)
+if defined BROWSER (
+  start "" "%BROWSER%" "http://127.0.0.1:7880/"
   timeout /t 2 /nobreak >nul
-  start "" "%EDGE%" "http://127.0.0.1:7880/precision"
+  start "" "%BROWSER%" "http://127.0.0.1:7880/precision"
 ) else (
   start "" "http://127.0.0.1:7880/"
   timeout /t 2 /nobreak >nul
