@@ -1,0 +1,239 @@
+/* =========================================================
+   Port1 / Port2 light workspace skin
+   Keeps the dense functional layout, aligns the background,
+   cards and controls with the new light homepage.
+   ========================================================= */
+body.port-light{
+  --bg:#f4fafb; --bg-2:#edf7fa;
+  --panel:#ffffff; --panel-solid:#ffffff;
+  --line:#dcebed; --line-strong:#c5dfe4;
+  --ink:#153b50; --muted:#5f7b89; --dim:#8aa1ad;
+  --cyan:#0b63ce; --cyan-soft:#e8f3ff;
+  --green:#1b9d5a; --red:#d94b4b; --blue:#0b63ce; --amber:#bf861f; --violet:#6b78c4;
+  --ok:#1b9d5a;
+  background:
+    radial-gradient(1100px 520px at 8% 0%,rgba(204,242,236,.62),transparent 64%),
+    radial-gradient(900px 520px at 94% 4%,rgba(205,231,255,.65),transparent 68%),
+    linear-gradient(180deg,#f6fbfc 0%,#f4fafb 55%,#eef7f9 100%);
+  color:var(--ink);
+}
+body.port-light::before{
+  background-image:linear-gradient(rgba(43,120,137,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(43,120,137,.035) 1px,transparent 1px);
+  mask-image:linear-gradient(to bottom,#000,transparent 92%);
+}
+body.port-light .wrap{max-width:1560px;padding-top:20px}
+body.port-light .topbar{padding:2px 0 18px}
+body.port-light .logo{background:linear-gradient(145deg,#d9f6ee,#c7e9f8);border-color:#b9dfe6;box-shadow:0 8px 22px rgba(20,91,107,.10)}
+body.port-light .brand h1{color:#0c2b49;font-weight:800}
+body.port-light .brand h1 span{color:#167f72}
+body.port-light .brand p{color:#6e8a98;letter-spacing:1.4px}
+body.port-light .chip{background:rgba(255,255,255,.82);border-color:#d8e9ec;color:#5d7a87;box-shadow:0 3px 10px rgba(24,84,103,.03)}
+body.port-light .chip b{color:#234b5e}
+body.port-light .chip.ok{background:#edfaf4;border-color:#cbeadc;color:#327b61}
+body.port-light .chip.warn{background:#fff8e8;border-color:#f0dfb7;color:#977025}
+body.port-light .chip.off{background:#fff0f0;border-color:#f0cccc;color:#a84a4a}
+body.port-light .chip.ok .dot{box-shadow:0 0 0 3px rgba(27,157,90,.12)}
+body.port-light .chip.warn .dot{box-shadow:0 0 0 3px rgba(191,134,31,.12)}
+body.port-light .chip.off .dot{box-shadow:0 0 0 3px rgba(217,75,75,.12)}
+
+body.port-light .stepper{gap:12px}
+body.port-light .step-tab{background:#fff;border-color:#dcebed;box-shadow:0 5px 16px rgba(24,84,103,.035)}
+body.port-light .step-tab:hover{border-color:#bcdde2;box-shadow:0 8px 20px rgba(24,84,103,.07)}
+body.port-light .step-tab.active{background:linear-gradient(120deg,#e9f6ff,#eafaf3);border-color:#8fc8da;box-shadow:0 8px 22px rgba(24,96,120,.08)}
+body.port-light .step-tab.active::after{background:linear-gradient(90deg,#0b63ce,#1b9d5a)}
+body.port-light .step-tab.done{border-color:#bfe6d3}
+body.port-light .step-no{background:#f3fafb;border-color:#d3e6e9;color:#66828e}
+body.port-light .step-tab.active .step-no{color:#fff;background:#0b63ce;border-color:#0b63ce}
+body.port-light .step-tab.done .step-no{color:#fff;background:#1b9d5a;border-color:#1b9d5a}
+body.port-light .step-tab h3{color:#214b5e}
+body.port-light .step-tab p{color:#7a929c}
+
+body.port-light .card{background:rgba(255,255,255,.94);border-color:#dcebed;box-shadow:0 12px 32px rgba(24,84,103,.055);backdrop-filter:blur(12px)}
+body.port-light .card-head{background:linear-gradient(180deg,rgba(247,252,253,.9),rgba(255,255,255,.95));border-bottom-color:#e6f1f2;padding:14px 18px}
+body.port-light .card-head h2{color:#254f61;font-weight:800}
+body.port-light .card-head h2 .ic{color:#16897d}
+body.port-light .card-head .sub{color:#7d96a0}
+body.port-light .card-body{background:transparent}
+body.port-light .section-label{color:#7c96a1;font-size:10px;letter-spacing:.8px;font-weight:700}
+body.port-light .section-label::after{background:#e4eff1}
+body.port-light .footer{border-top-color:#dcebed;color:#8ba1ab}
+body.port-light .footer a{color:#277e72}
+
+body.port-light .drop{background:linear-gradient(180deg,#fbfefe,#f2fafb);border-color:#bfdee2;min-height:270px}
+body.port-light .drop:hover,body.port-light .drop.over{border-color:#3f9f92;background:#edfaf7}
+body.port-light .drop .ico{filter:saturate(.85)}
+body.port-light .drop p{color:#698694}
+body.port-light .drop small{color:#91a6ae}
+body.port-light .image-stage{background:#eef7f8;border-color:#d4e7ea}
+body.port-light .image-stage .badge{background:rgba(255,255,255,.88);border-color:#d6e7ea;color:#527481}
+body.port-light .scanning{background:rgba(244,251,252,.82)}
+body.port-light .scanning p{color:#0f6f82}
+body.port-light .quality .q-item{background:#f8fcfd;border-color:#e2eef0}
+body.port-light .q-item .k{color:#758f9a}
+body.port-light .q-item .v{color:#214d5f}
+
+body.port-light .counts .count-pill{background:#fff;border-color:#dcebed;color:#6e8995}
+body.port-light .count-pill b{color:#224f61}
+body.port-light .table-wrap{border-color:#dcebed;background:#fff}
+body.port-light table{color:#365c6b}
+body.port-light thead th{background:#eef7f8;color:#65818d;border-bottom-color:#dcebed}
+body.port-light tbody td{border-bottom-color:#edf5f6}
+body.port-light tbody tr:hover{background:#f1fafb}
+body.port-light .id-badge{background:#e8f5ff;color:#0b63ce;border-color:#cbe4f8}
+body.port-light .cls-badge.coal{color:#268b60}
+body.port-light .cls-badge.rock{color:#c45b5b}
+body.port-light .cls-badge.misc{color:#477fa8}
+body.port-light .feat-tag{background:#f3f9fa;border-color:#e2edef;color:#5d7d88}
+body.port-light .feat-tag.D{color:#248b68}
+body.port-light .feat-tag.L{color:#c26565}
+body.port-light .feat-tag.G{color:#b08425}
+body.port-light .feat-tag.T{color:#4e82b2}
+body.port-light .feat-tag.S{color:#736bb4}
+body.port-light .conf-bar{background:#e9f2f4}
+body.port-light .conf-bar .range{background:rgba(11,99,206,.22)}
+body.port-light .conf-bar .point{background:#0b63ce}
+body.port-light .conf-num small{color:#8da2ab}
+
+body.port-light .btn{background:#fff;border-color:#d2e3e7;color:#315b69;box-shadow:0 2px 5px rgba(24,84,103,.03)}
+body.port-light .btn:hover{background:#eefafa;border-color:#9bcac6;color:#126d62}
+body.port-light .btn.primary{background:linear-gradient(120deg,#0b6ad4,#0756b6);border-color:transparent;color:#fff;box-shadow:0 7px 18px rgba(11,99,206,.20)}
+body.port-light .btn.primary:hover{filter:brightness(1.06);color:#fff}
+body.port-light .btn.ghost{background:#fff}
+body.port-light .btn:disabled{opacity:.5}
+body.port-light .field label{color:#6e8792}
+body.port-light .field label b{color:#315a69}
+body.port-light .field input,body.port-light .field select,body.port-light .field textarea{background:#fbfefe;border-color:#d6e7e9;color:#264f60;box-shadow:none}
+body.port-light .field input:focus,body.port-light .field select:focus,body.port-light .field textarea:focus{border-color:#3e9f9a;box-shadow:0 0 0 3px rgba(62,159,154,.10);background:#fff}
+body.port-light .field .hint{color:#8ca1a9}
+body.port-light .input-unit .unit{color:#8ca1a9}
+body.port-light .field label .req{color:#d25b5b}
+
+body.port-light .notice{background:#f7fcfd;border-color:#dfecee;color:#5e7d89}
+body.port-light .notice.cyan{background:#eef8ff;border-color:#d2e7f8;color:#3b6d91}
+body.port-light .notice.green{background:#ebfaf3;border-color:#cbeadc;color:#34775f}
+body.port-light .notice b{color:inherit}
+body.port-light .pred-empty,body.port-light .empty{color:#8ba2ab}
+body.port-light .empty .big{opacity:.35}
+body.port-light .model-card{background:#fbfefe;border-color:#e0edef}
+body.port-light .model-card .name{color:#315b69}
+body.port-light .model-card .r2{color:#0b63ce}
+body.port-light .model-card .feat{color:#8ba1a9}
+body.port-light .model-card .meter{background:#e8f2f4}
+body.port-light .model-card .meter i{background:linear-gradient(90deg,#0b63ce,#1b9d5a)}
+body.port-light .comp-val{color:#214d5f}
+body.port-light .comp-range{color:#8da2aa}
+body.port-light .comp-bar{background:#e9f2f4}
+body.port-light .comp-cell .c-SiO2,body.port-light .comp-cell .c-SiO2 i{color:#0e7e9a}
+body.port-light .case-table th{color:#7d969f}
+body.port-light .case-table td{border-bottom-color:#edf5f6;color:#54727e}
+
+body.port-light .stone-input-card{background:#fbfefe;border-color:#deecee}
+body.port-light .stone-input-head .sample-tag{color:#247f8d;border-color:#cde6e9;background:#f2fafb}
+body.port-light .phys-chip{color:#5c7c87;background:#f4fafb;border-color:#e3eef0}
+body.port-light .stone-measured{color:#8ba1a9}
+body.port-light .stone-measured b{color:#315a69}
+body.port-light .pred-stone{background:#fbfefe;border-color:#e1edef}
+body.port-light .pred-stone-head .mono{color:#8da2aa}
+body.port-light .err-stone{border-color:#e1edef}
+body.port-light .err-stone-head{color:#78929d}
+body.port-light .err-stone-head b{color:#315a69}
+body.port-light .err-pill{border-color:transparent}
+body.port-light .err-good{background:#eafaf2;color:#287c5a}
+body.port-light .err-warn{background:#fff7e6;color:#956f26}
+body.port-light .err-bad{background:#fff0f0;color:#b34b4b}
+
+body.port-light .rec-card{background:#fff;border-color:#dcebed}
+body.port-light .rec-head{background:#f7fcfd;border-bottom-color:#e8f2f4}
+body.port-light .rec-head .title{color:#214d5f}
+body.port-light .rec-body .row .k{color:#8ba1aa}
+body.port-light .rec-body .row .v{color:#54717d}
+body.port-light .rec-body .row .v b{color:#214d5f}
+body.port-light .sub-chip{background:#f2f9fa;border-color:#e0edef;color:#557581}
+body.port-light .rec-note{color:#8ba1a9}
+body.port-light .conf.高{background:#eafaf2;color:#287c5a;border-color:#ccebdc}
+body.port-light .conf.中{background:#fff7e6;color:#956f26;border-color:#eedcb6}
+body.port-light .conf.低{background:#fff0f0;color:#b34b4b;border-color:#efd1d1}
+
+body.port-light .precision-hero{background:linear-gradient(120deg,#effaf7,#eef7ff);border-color:#d8ece8;box-shadow:0 12px 28px rgba(24,84,103,.05)}
+body.port-light .precision-hero h2{color:#153b50}
+body.port-light .precision-hero p{color:#6f8b95}
+body.port-light .eyebrow{color:#268b78}
+body.port-light .hero-stat b{color:#0b63ce}
+body.port-light .hero-stat span{color:#8ba1aa}
+body.port-light .form-section{border-top-color:#e4eff1}
+body.port-light .form-details{background:#fbfefe;border-color:#dfecee}
+body.port-light .form-details summary{color:#617f8b}
+body.port-light .p1-stepbar .p1-step-tab{background:#fff;border-color:#dcebed;color:#7a929c}
+body.port-light .p1-step-tab b{color:#0b63ce}
+body.port-light .p1-step-tab.active{background:#eaf6ff;border-color:#9dcee4;color:#244d60}
+body.port-light .p1-step-tab.done{border-color:#bfe6d3;color:#367960}
+body.port-light .p1-progress{background:#e8f2f4}
+body.port-light #p1-progress-bar{background:linear-gradient(90deg,#0b63ce,#1b9d5a)}
+body.port-light .p1-stone-head{background:#eef8fb;border-color:#d8eaee}
+body.port-light .p1-module-tab{border-color:#dcebed;color:#8298a3;background:#fff}
+body.port-light .p1-module-tab.active{border-color:#9dcee4;color:#0b63ce;background:#eaf6ff}
+body.port-light .p1-module-tab.done{color:#25805f;border-color:#c7e8d8;background:#f2fbf6}
+body.port-light .sample-tag{color:#247f8d;border-color:#cde6e9;background:#f2fafb}
+body.port-light .demo-title{color:#8ba1aa}
+body.port-light .demo-card{background:#fbfefe;border-color:#deecee;color:#617f8b}
+body.port-light .demo-card:hover,body.port-light .demo-card.active{border-color:#88c8d0;background:#effafb}
+body.port-light .demo-card b{color:#2b5261}
+body.port-light .demo-card small{color:#8ba1aa}
+
+body.port-light .result-card{background:#fff}
+body.port-light .route-badge{background:linear-gradient(135deg,#eaf6ff,#eafaf3);border-color:#bce2e0}
+body.port-light .route-code{color:#0b63ce}
+body.port-light .route-title{color:#194a5c}
+body.port-light .route-score b{color:#1b9d5a}
+body.port-light .route-score span{color:#8ba1aa}
+body.port-light .chain-step{background:#f6fbfc;border-color:#e0edef;color:#65828e}
+body.port-light .chain-step b{color:#0b63ce}
+body.port-light .param-item{background:#fbfefe;border-color:#e1edef;color:#65828e}
+body.port-light .param-item b{color:#2d5565}
+body.port-light .risk-card{background:#fff9eb;border-color:#efdfbd}
+body.port-light .risk-card.high{background:#fff2f2;border-color:#efd2d2}
+body.port-light .risk-card .rt{color:#9a6d1d}
+body.port-light .risk-card.high .rt{color:#b44b4b}
+body.port-light .risk-card p{color:#7d6a4e}
+body.port-light .req-list{color:#65828e}
+body.port-light .blocked-line{color:#b34b4b}
+body.port-light .result-block h4{color:#0b63ce}
+
+body.port-light .plan-card{background:#fff;border-color:#d8eaee;box-shadow:0 8px 22px rgba(24,84,103,.04)}
+body.port-light .plan-card:hover{border-color:#a9d7dc;box-shadow:0 12px 26px rgba(24,84,103,.075)}
+body.port-light .plan-no{background:#e8f5ff;border-color:#c9e3f6;color:#0b63ce}
+body.port-light .plan-stone{color:#8ba1aa}
+body.port-light .plan-title{color:#194a5c}
+body.port-light .plan-route{color:#0b63ce}
+body.port-light .plan-route span{color:#1b9d5a}
+body.port-light .plan-text{color:#65828e}
+body.port-light .step-note{background:#fbfefe;border-color:#e1edef;color:#65828e}
+body.port-light .step-note b{color:#0b63ce}
+body.port-light .metric-table td{color:#65828e;border-bottom-color:#edf5f6}
+body.port-light .metric-table td:first-child{color:#8ba1aa}
+body.port-light .metric-table td.num{color:#244d5f}
+body.port-light .thinking-panel{background:linear-gradient(180deg,#effaff,#effbf5);border-color:#cbe6ec}
+body.port-light .thinking-panel h3{color:#194a5c}
+body.port-light .thinking-panel p{color:#6f8b95}
+body.port-light .thinking-ring{border-color:#d6e9ef;border-top-color:#0b63ce}
+body.port-light .progress-track{background:#e7f1f3}
+body.port-light #p1-thinking-bar,body.port-light #p2-thinking-bar,body.port-light #p2-predict-thinking-bar{background:linear-gradient(90deg,#0b63ce,#1b9d5a)}
+body.port-light #p1-thinking-pct,body.port-light #p2-thinking-pct,body.port-light #p2-predict-thinking-pct{color:#0b63ce}
+
+body.port-light .modal{background:#fff;border-color:#dcebed;box-shadow:0 30px 80px rgba(12,55,70,.18)}
+body.port-light .modal-head{border-bottom-color:#e4eff1}
+body.port-light .modal-head h3{color:#214d5f}
+body.port-light .modal-foot{border-top-color:#e4eff1}
+body.port-light .icon-btn{color:#7d96a0}
+body.port-light .toast{background:#fff;border-color:#dcebed;color:#335866;box-shadow:0 12px 28px rgba(12,55,70,.12)}
+body.port-light .toast.ok{border-color:#bfe6d3;color:#287c5a}
+body.port-light .toast.err{border-color:#efd2d2;color:#b34b4b}
+
+/* Keep generated SVG diagrams as a dark inset for contrast */
+body.port-light .flow-svg{background:#0c1826;border-color:#bdd7dd;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
+body.port-light .flow-svg text{fill:#dbeafe}
+
+@media (max-width:760px){
+  body.port-light .topbar{padding-top:0}
+  body.port-light .drop{min-height:220px}
+}

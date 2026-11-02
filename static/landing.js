@@ -130,3 +130,94 @@ function renderWorkflow(d) {
 
 loadHome();
 setInterval(loadHome, 60000);
+
+/* ---------------- simple demo auth ---------------- */
+const AUTH_USER_KEY = "yzb_auth_user";
+const AUTH_USERS_KEY = "yzb_auth_users";
+const DEMO_ADMIN = { username: "admin", password: "admin123", role: "系统管理员" };
+let authMode = "login";
+let memoryUsers = [];
+
+function readUsers() {
+  let users = [];
+  try { users = JSON.parse(localStorage.getItem(AUTH_USERS_KEY) || "[]"); } catch (e) { users = memoryUsers; }
+  if (!Array.isArray(users)) users = [];
+  if (!users.some((u) => u && u.username === DEMO_ADMIN.username)) users.unshift(DEMO_ADMIN);
+  return users;
+}
+function saveUsers(users) {
+  memoryUsers = users;
+  try { localStorage.setItem(AUTH_USERS_KEY, JSON.stringify(users)); } catch (e) {}
+}
+function currentUser() {
+  try { return JSON.parse(localStorage.getItem(AUTH_USER_KEY) || "null"); } catch (e) { return null; }
+}
+function setCurrentUser(user) {
+  try {
+    if (user) localStorage.setItem(AUTH_USER_KEY, JSON.stringify({ username: user.username, role: user.role || "系统管理员" }));
+    else localStorage.removeItem(AUTH_USER_KEY);
+  } catch (e) {}
+  paintAuthChip();
+}
+function paintAuthChip() {
+  const u = currentUser();
+  $("#auth-name").textContent = u ? u.username : "系统管理员";
+  $("#auth-avatar").textContent = u ? String(u.username).slice(0, 1).toUpperCase() : "研";
+}
+function openAuth(mode = "login") {
+  authMode = mode;
+  const u = currentUser();
+  $("#auth-modal").classList.add("show");
+  $("#auth-error").textContent = "";
+  const loggedIn = !!u;
+  document.querySelectorAll(".auth-tabs, #auth-form, .auth-demo").forEach((el) => {
+    el.style.display = loggedIn ? "none" : "";
+  });
+  $("#auth-logout").classList.toggle("hidden", !loggedIn);
+  if (loggedIn) {
+    $("#auth-title").textContent = "已登录";
+    $("#auth-sub").textContent = `当前账号：${u.username} · ${u.role || "系统管理员"}（演示校验，仅保存在本机浏览器）`;
+    return;
+  }
+  $("#auth-title").textContent = mode === "register" ? "注册账号" : "登录平台";
+  $("#auth-sub").textContent = "演示版仅做前端校验，不连接真实账号系统。";
+  document.querySelectorAll("[data-auth-tab]").forEach((b) => b.classList.toggle("active", b.dataset.authTab === mode));
+  $("#auth-confirm-row").classList.toggle("hidden", mode !== "register");
+  $("#auth-submit").textContent = mode === "register" ? "注册并登录" : "登录";
+  setTimeout(() => { const el = mode === "register" ? $("#auth-user") : $("#auth-user"); if (el) el.focus(); }, 30);
+}
+function closeAuth() { $("#auth-modal").classList.remove("show"); }
+function authError(msg) { $("#auth-error").textContent = msg || ""; }
+
+function handleAuthSubmit(e) {
+  e.preventDefault();
+  if (currentUser()) return;
+  const username = $("#auth-user").value.trim();
+  const password = $("#auth-pass").value;
+  const confirm = $("#auth-confirm").value;
+  if (username.length < 3) return authError("用户名至少 3 个字符");
+  if (password.length < 6) return authError("密码至少 6 位");
+  const users = readUsers();
+  if (authMode === "register") {
+    if (password !== confirm) return authError("两次密码不一致");
+    if (users.some((u) => u.username === username)) return authError("用户名已存在，请直接登录");
+    const user = { username, password, role: "注册用户" };
+    users.push(user); saveUsers(users);
+    setCurrentUser(user); closeAuth(); return;
+  }
+  const user = users.find((u) => u.username === username && u.password === password);
+  if (!user) return authError("用户名或密码不正确（演示账号 admin / admin123）");
+  setCurrentUser(user); closeAuth();
+}
+
+function initAuth() {
+  paintAuthChip();
+  $("#auth-open").addEventListener("click", () => openAuth("login"));
+  $("#auth-close").addEventListener("click", closeAuth);
+  $("#auth-modal").addEventListener("click", (e) => { if (e.target === $("#auth-modal")) closeAuth(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAuth(); });
+  document.querySelectorAll("[data-auth-tab]").forEach((b) => b.addEventListener("click", () => openAuth(b.dataset.authTab)));
+  $("#auth-form").addEventListener("submit", handleAuthSubmit);
+  $("#auth-logout").addEventListener("click", () => { setCurrentUser(null); closeAuth(); });
+}
+document.addEventListener("DOMContentLoaded", initAuth);

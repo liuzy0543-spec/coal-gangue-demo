@@ -14,9 +14,13 @@
 
 新的浅色平台首页参考“研智配”风格：顶部导航 + 品牌区 + 两个端口选择卡 + 能力区 + 工作流程 + 运行概况 + 路线分布 + 知识库/案例预览。首页数据由 `/api/home` 动态读取真实记录数、来源组、建模样本、路线分布、部分知识库条目和真实案例；两个端口可从这里直接进入。
 
+右上角「系统管理员」提供演示登录/注册：默认账号 `admin / admin123`，注册账号存本机 localStorage；仅做演示校验，不接真实账号系统。
+
 ## 1. 两个端口
 
 ### 端口二 · 视觉粗筛（http://127.0.0.1:7880/vision）
+
+> 端口一/二均已切换为浅色工作台皮肤（背景、卡片、表格、输入框、按钮），数据流图保留深色内嵌以保证可读性。
 
 - YOLOv8s 识别煤块 / 矸石 / 低置信度其他杂石；
 - 每块矸石独立生成输入卡，带入第一步 CV 读到的 D/L/G/T/S；
@@ -36,7 +40,7 @@
 5. **思考动画**：生成时显示“AI 正在根据知识库深度学习”、转圈和 2 秒进度条；
 6. **模型配置**：右上角「模型配置」可填智谱 API Key；默认免费 `glm-4.5-flash`，未配置则离线知识库。
 
-**界面截图**：[平台首页](outputs/shots/30_home.png) ｜ [平台首页全页](outputs/shots/31_home_full.png) ｜ [首页移动端](outputs/shots/32_home_mobile.png) ｜ [端口二逐石输入](outputs/shots/22_port2_inputs.png) ｜ [逐石误差弹窗](outputs/shots/23_port2_error.png) ｜ [端口二方案/数据流图](outputs/shots/29_port2_plan.png) ｜ [端口一图片识别](outputs/shots/25_port1_upload.png) ｜ [端口一逐石表单](outputs/shots/26_port1_form.png) ｜ [端口一方案/数据流图](outputs/shots/27_port1_plan.png) ｜ [端口一思考动画](outputs/shots/28_port1_thinking.png)
+**界面截图**：[平台首页](outputs/shots/30_home.png) ｜ [管理员登录](outputs/shots/37_auth_login.png) ｜ [端口一浅色](outputs/shots/33_port1_light.png) ｜ [端口二浅色](outputs/shots/34_port2_light.png) ｜ [端口一方案浅色](outputs/shots/35_port1_light_plan.png) ｜ [端口二方案浅色](outputs/shots/36_port2_light_plan.png) ｜ [平台首页全页](outputs/shots/31_home_full.png) ｜ [首页移动端](outputs/shots/32_home_mobile.png) ｜ [端口二逐石输入](outputs/shots/22_port2_inputs.png) ｜ [逐石误差弹窗](outputs/shots/23_port2_error.png) ｜ [端口二方案/数据流图](outputs/shots/29_port2_plan.png) ｜ [端口一图片识别](outputs/shots/25_port1_upload.png) ｜ [端口一逐石表单](outputs/shots/26_port1_form.png) ｜ [端口一方案/数据流图](outputs/shots/27_port1_plan.png) ｜ [端口一思考动画](outputs/shots/28_port1_thinking.png)
 
 ---
 
