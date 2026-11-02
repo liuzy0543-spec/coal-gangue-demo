@@ -83,7 +83,8 @@ if defined BROWSER (
 echo.
 echo ============================================================
 echo   [PASS] 两个端口均通过 API 自检。
-echo   端口二： http://127.0.0.1:7880/
+echo   首页：   http://127.0.0.1:7880/
+echo   端口二： http://127.0.0.1:7880/vision
 echo   端口一： http://127.0.0.1:7880/precision
 echo   健康检查： http://127.0.0.1:7880/api/health
 echo   自检报告： outputs\verify_ports.json

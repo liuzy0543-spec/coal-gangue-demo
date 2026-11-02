@@ -1329,6 +1329,11 @@ def index():
     return send_from_directory(str(ROOT / "static"), "index.html")
 
 
+@app.route("/vision")
+def vision_page():
+    return send_from_directory(str(ROOT / "static"), "vision.html")
+
+
 @app.route("/outputs/<path:sub>")
 def outputs(sub):
     return send_from_directory(str(OUT), sub)
@@ -1532,6 +1537,82 @@ def api_precision_recommend():
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+def home_payload() -> Dict:
+    cached = app_state.get("home_payload")
+    if cached:
+        return cached
+    d = pd.read_excel(V2_DATA_PATH, sheet_name="煤矸石全量数据库_标准输入总表", header=3, skiprows=[4])
+    route_col = "12大标准组合处理工艺路线编码"
+    route_counts = d[route_col].astype(str).value_counts().to_dict()
+    kb = load_kb_v3()
+    names = {e["id"]: e["name"] for e in kb.get("entries", [])}
+    chains = {e["id"]: e.get("process_chain") or [] for e in kb.get("entries", [])}
+    valid = sum(v for k, v in route_counts.items() if k.startswith("R"))
+    routes = []
+    for k, v in sorted(route_counts.items(), key=lambda kv: -kv[1]):
+        if not str(k).startswith("R"):
+            continue
+        routes.append({"code": k, "name": names.get(k, ""), "count": int(v),
+                       "pct": round(v / max(1, valid) * 100, 1),
+                       "process_chain": chains.get(k, [])})
+    demo = (load_json(DEMO_SAMPLES_V2_PATH, {}) or {}).get("samples", [])
+    cases = []
+    for s in demo[:4]:
+        cases.append({"sample_id": s.get("sample_id"), "city": s.get("city"),
+                      "route_code": s.get("route_code"), "route_name": s.get("route_name"),
+                      "inputs": s.get("inputs") or {}, "measured": s.get("measured") or {},
+                      "title": s.get("title")})
+    metrics = app_state.get("metrics", {})
+    if len(routes) > 8:
+        top = routes[:7]
+        other = max(0, valid - sum(x["count"] for x in top))
+        top.append({"code": "OTHER", "name": "其他路线", "count": other,
+                    "pct": round(other / max(1, valid) * 100, 1), "process_chain": []})
+        routes = top
+    stats = {
+        "records": int(len(d)),
+        "groups": int(d["文献来源分组ID"].nunique()),
+        "model_samples": int((metrics.get("n") or 328)),
+        "routes": len(kb.get("entries", [])),
+        "risk_rules": len(kb.get("risk_rules", [])),
+        "demo_images": len(PRECISION_DEMO_IMAGES),
+        "kb_samples": int(valid),
+    }
+    payload = {
+        "ok": True, "updated": time.strftime("%Y-%m-%d"),
+        "stats": stats, "routes": routes[:8],
+        "kb_preview": [{"id": e["id"], "name": e["name"], "category": e.get("category", ""),
+                        "standard": e.get("standard", "")} for e in kb.get("entries", [])[:6]],
+        "cases": cases,
+        "hero": {
+            "image": "/tests/images/case_a.jpg",
+            "sample": demo[0] if demo else {},
+            "route": (routes[0] if routes else {"code": "R12", "name": "资源化利用"}),
+        },
+        "ports": [
+            {"id": "precision", "name": "端口一 · 化验单精准匹配", "href": "/precision",
+             "desc": "基于 XRF / XRD / 工业分析等化验数据，智能匹配适宜工艺与利用路线。",
+             "accent": "blue"},
+            {"id": "vision", "name": "端口二 · 视觉粗筛", "href": "/vision",
+             "desc": "基于图像识别，快速判断煤矸石特征、预测主要成分，并推荐利用路线。",
+             "accent": "green"},
+        ],
+        "workflow": [
+            {"no": "1", "title": "上传数据 / 图像", "desc": "上传化验数据或煤矸石图像"},
+            {"no": "2", "title": "智能识别", "desc": "图像识别与样品特征提取"},
+            {"no": "3", "title": "成分解析", "desc": "成分预测与资源属性分析"},
+            {"no": "4", "title": "工艺推荐", "desc": "匹配适宜工艺与利用路线"},
+        ],
+    }
+    app_state["home_payload"] = payload
+    return payload
+
+
+@app.route("/api/home")
+def api_home():
+    return jsonify(_json_safe(home_payload()))
+
+
 @app.route("/api/health")
 def api_health():
     kb = load_kb_v3()
@@ -1541,7 +1622,7 @@ def api_health():
                     "kb_count": len(kb.get("entries", [])),
                     "kb_version": kb.get("version", ""),
                     "yolo_ready": app_state.get("model") is not None,
-                    "ports": {"port2": "/", "port1": "/precision", "api": "/api"}})
+                    "ports": {"home": "/", "port2": "/vision", "port1": "/precision", "api": "/api"}})
 
 
 @app.route("/api/meta")

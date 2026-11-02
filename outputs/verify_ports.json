@@ -7,6 +7,11 @@
       "detail": "models=['SiO2', 'Al2O3', 'Fe2O3', 'CaO'] kb=12"
     },
     {
+      "name": "首页动态数据",
+      "ok": true,
+      "detail": "records=635 routes=8 cases=4"
+    },
+    {
       "name": "端口二图像识别",
       "ok": true,
       "detail": "5 个目标 / 3 块矸石"
@@ -68,8 +73,9 @@
     "ok": true,
     "ports": {
       "api": "/api",
+      "home": "/",
       "port1": "/precision",
-      "port2": "/"
+      "port2": "/vision"
     },
     "ready": true,
     "yolo_ready": true

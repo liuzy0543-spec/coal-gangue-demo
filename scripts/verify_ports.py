@@ -64,6 +64,13 @@ def main():
         assert h.get("kb_count", 0) >= 12, "知识库不足 12 条"
         assert len(h.get("models", [])) >= 4, "模型不足 4 个"
 
+        home = call("/api/home")
+        assert home.get("ok"), "首页动态数据未返回"
+        assert (home.get("stats") or {}).get("records", 0) > 0, "首页记录数为 0"
+        assert len(home.get("routes") or []) >= 5, "首页路线分布不足"
+        report["checks"].append({"name": "首页动态数据", "ok": True,
+                                 "detail": f"records={home['stats']['records']} routes={len(home.get('routes') or [])} cases={len(home.get('cases') or [])}"})
+
         samples = call("/api/demo_samples").get("samples", [])
         assert samples, "没有逐石示例"
         detect = call("/api/detect", {"path": "tests/images/case_a.jpg", "conf": 0.25, "iou": 0.45}, timeout=240)
