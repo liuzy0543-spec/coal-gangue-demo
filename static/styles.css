@@ -595,3 +595,9 @@ td.num, th.num { font-family: var(--mono); text-align: right; }
 .step-note { border:1px solid var(--line); border-radius:8px; padding:6px 8px; font-size:10.5px; color:var(--muted); line-height:1.65; }
 .step-note b { display:block; color:#7dd3fc; font-size:10px; margin-bottom:2px; }
 @media (max-width:760px) { .step-notes { grid-template-columns:1fr; } }
+/* port2 step3: top/bottom layout, full-width flow */
+.step3-stack { display:flex; flex-direction:column; gap:20px; }
+.step3-stack > .card { width:100%; }
+.step3-stack #rec-result .flow-svg { width:100%; max-width:none; }
+.step3-stack #rec-result .plan-list { gap:18px; }
+@media (max-width:760px) { .step3-stack { gap:14px; } }
