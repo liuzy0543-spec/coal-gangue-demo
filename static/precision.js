@@ -200,11 +200,28 @@ async function loadDemoImage(path) {
 }
 
 /* ---------------- 逐石表单 ---------------- */
+function hydrateForm(f) {
+  const s = f && f.sample;
+  if (!s || !s.inputs) return;
+  const d = f.data, i = s.inputs, q = s.quality || {};
+  if (Object.values(d.chemical || {}).every((v) => v == null)) {
+    d.chemical = { SiO2: i.SiO2, Al2O3: i.Al2O3, Fe2O3: i.Fe2O3, CaO: i.CaO,
+      MgO: i.MgO, SO3: i.SO3, K2O: i.K2O, Na2O: i.Na2O, LOI: i.LOI };
+    d.industrial = { ash: i.ash, volatile: i.volatile, FC: i.FC, St: i.St, Qnet: i.Qnet };
+    d.xrd = { kaolinite: i.kaolinite, quartz: i.quartz, illite: i.illite,
+      chlorite: i.chlorite, calcite: i.calcite, pyrite: i.pyrite };
+    d.environment = { ...d.environment, pH: q.pH ?? d.environment.pH,
+      heavy_metal: q.heavy_metal || d.environment.heavy_metal,
+      radioactivity: q.radioactivity || d.environment.radioactivity };
+  }
+}
+
 function fillForm(index, module = P.module || 0) {
   if (!P.forms.length) return;
   P.idx = Math.max(0, Math.min(index, P.forms.length - 1));
   P.module = Math.max(0, Math.min(module, MODULES.length - 1));
   const f = P.forms[P.idx];
+  hydrateForm(f);
   const d = f.data;
   const feat = f.stone.feature || {};
   const chips = ["D", "L", "G", "T", "S"].map((k) => feat[k] ? `<span class="phys-chip">${esc(feat[k].code)} ${esc(feat[k].name)}</span>` : "").join("");
@@ -430,10 +447,20 @@ function wrapText(text, width = 7) {
   for (let i = 0; i < s.length; i += width) lines.push(s.slice(i, i + width));
   return lines.slice(0, 3);
 }
-function flowSVG(chain, code) {
-  const nodes = ["原矸 / 实验指标", ...(chain || []), "产品 / 去向"];
+function detailText(d, chainStep) {
+  let t = typeof d === "string" ? d : (d && d.detail) || "";
+  if (!t) return "";
+  if (chainStep && t.startsWith(chainStep)) {
+    t = t.slice(chainStep.length).replace(/^[：:、,，\s]+/, "");
+  }
+  return t;
+}
+function flowSVG(chain, code, details) {
+  const steps = chain || [];
+  const dlist = (details || []).map((d, i) => detailText(d, steps[i]));
+  const nodes = ["原矸 / 实验指标", ...steps, "产品 / 去向"];
   const cols = 5, rows = Math.ceil(nodes.length / cols);
-  const bw = 155, bh = 56, gapX = 32, gapY = 58, x0 = 24, y0 = 28;
+  const bw = 188, bh = 108, gapX = 20, gapY = 42, x0 = 24, y0 = 28;
   const width = x0 * 2 + cols * bw + (cols - 1) * gapX;
   const height = y0 * 2 + rows * bh + (rows - 1) * gapY;
   const pos = [];
@@ -448,33 +475,37 @@ function flowSVG(chain, code) {
   svg += `<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="rgba(125,211,252,.8)"/></marker></defs>`;
   for (let i = 0; i < nodes.length - 1; i++) {
     const a = pos[i], b = pos[i + 1];
-    const ay = a.y + bh / 2;
-    const by = b.y + bh / 2;
+    const ay = a.y + bh / 2, by = b.y + bh / 2;
     if (a.y === b.y) {
       const rightward = b.x > a.x;
       const ax = rightward ? a.x + bw : a.x;
       const bx = rightward ? b.x - 4 : b.x + bw + 4;
       svg += `<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="rgba(125,211,252,.45)" stroke-width="1.6" marker-end="url(#arrow)"/>`;
     } else {
-      svg += `<path d="M ${a.x + bw / 2} ${a.y + bh} L ${a.x + bw / 2} ${b.y - 16} L ${b.x + bw / 2} ${b.y - 16} L ${b.x + bw / 2} ${b.y - 4}" fill="none" stroke="rgba(125,211,252,.45)" stroke-width="1.6" marker-end="url(#arrow)"/>`;
+      svg += `<path d="M ${a.x + bw / 2} ${a.y + bh} L ${a.x + bw / 2} ${b.y - 14} L ${b.x + bw / 2} ${b.y - 14} L ${b.x + bw / 2} ${b.y - 4}" fill="none" stroke="rgba(125,211,252,.45)" stroke-width="1.6" marker-end="url(#arrow)"/>`;
     }
   }
   nodes.forEach((label, i) => {
     const p = pos[i];
-    const isEnd = i === 0 || i === nodes.length - 1;
-    const fill = isEnd ? "rgba(34,197,94,.13)" : "rgba(56,189,248,.09)";
-    const stroke = isEnd ? "rgba(74,222,128,.55)" : "rgba(125,211,252,.4)";
+    const isStart = i === 0, isEnd = i === nodes.length - 1;
+    const fill = isStart || isEnd ? "rgba(34,197,94,.13)" : "rgba(56,189,248,.09)";
+    const stroke = isStart || isEnd ? "rgba(74,222,128,.55)" : "rgba(125,211,252,.4)";
+    const detail = isStart ? "实验报告：XRF / 工业 / XRD / 环保" : isEnd ? "处理产品与去向" : (dlist[i - 1] || "按路线参数执行");
+    svg += `<g><title>${escX(label + "：" + detail)}</title>`;
     svg += `<rect x="${p.x}" y="${p.y}" width="${bw}" height="${bh}" rx="9" fill="${fill}" stroke="${stroke}"/>`;
-    svg += `<text x="${p.x + 10}" y="${p.y + 18}" fill="${isEnd ? "#86efac" : "#7dd3fc"}" font-size="9" font-family="monospace">${String(i).padStart(2, "0")} ${isEnd ? (i === 0 ? "INPUT" : "OUTPUT") : "STEP"}</text>`;
-    wrapText(label, 8).forEach((line, k) => {
-      svg += `<text x="${p.x + 10}" y="${p.y + 33 + k * 13}" fill="#dbeafe" font-size="9.5">${escX(line)}</text>`;
+    svg += `<text x="${p.x + 10}" y="${p.y + 16}" fill="${isStart || isEnd ? "#86efac" : "#7dd3fc"}" font-size="9" font-family="monospace">${String(i).padStart(2, "0")} ${isStart ? "INPUT" : isEnd ? "OUTPUT" : "STEP"}</text>`;
+    wrapText(label, 9).slice(0, 2).forEach((line, k) => {
+      svg += `<text x="${p.x + 10}" y="${p.y + 32 + k * 12}" fill="#dbeafe" font-size="9.5" font-weight="600">${escX(line)}</text>`;
     });
+    wrapText(detail, 18).slice(0, 3).forEach((line, k) => {
+      svg += `<text x="${p.x + 10}" y="${p.y + 61 + k * 12}" fill="#9fb3c8" font-size="7.5">${escX(line)}</text>`;
+    });
+    svg += `</g>`;
   });
   svg += `</svg>`;
   return svg;
 }
 
-/* ---------------- 结果渲染 ---------------- */
 function planBlock(r, i) {
   const p = r.primary || {};
   const plan = r.llm_plan || null;
@@ -484,6 +515,11 @@ function planBlock(r, i) {
   const risks = (r.risks || []).map((x) => `<div class="risk-card ${x.severity === "high" ? "high" : ""}"><div class="rt">${x.severity === "high" ? "⛔" : "⚠"} ${esc(x.title)}</div><p>${esc(x.message)}</p></div>`).join("");
   const qc = (plan && plan.quality_control || []).map((x) => `<li>${esc(x)}</li>`).join("");
   const rc = (plan && plan.risk_control || []).map((x) => `<li>${esc(x)}</li>`).join("");
+  const details = (plan && plan.step_details) || [];
+  const detailHtml = (p.process_chain || []).map((step, i) => {
+    const text = detailText(details[i], step);
+    return text ? `<div class="step-note"><b>${String(i + 1).padStart(2, "0")} ${esc(step)}</b><span>${esc(text)}</span></div>` : "";
+  }).join("");
   return `<article class="plan-card" data-plan-index="${i}" title="双击查看本块实验指标">
     <div class="plan-head">
       <div class="plan-no">${String(i + 1).padStart(2, "0")}</div>
@@ -492,7 +528,8 @@ function planBlock(r, i) {
       <div class="plan-route">${esc(p.route_code || "")}<span>${esc(p.confidence || "中")}</span></div>
     </div>
     <div class="plan-meta"><span class="chip" style="padding:1px 7px;font-size:10px">${esc(p.category || "")}</span><span class="mono" style="font-size:10px;color:var(--dim)">${esc(p.standard || "")}</span><span class="mono" style="font-size:10px;color:var(--dim)">双击看指标</span></div>
-    <div class="result-block"><h4>数据流图 · 八工序</h4>${flowSVG(p.process_chain, p.route_code)}</div>
+    <div class="result-block"><h4>数据流图 · 八工序</h4>${flowSVG(p.process_chain, p.route_code, details)}</div>
+    ${detailHtml ? `<div class="result-block"><h4>工序展开</h4><div class="step-notes">${detailHtml}</div></div>` : ""}
     ${p.products ? `<div class="result-block"><h4>目标产品</h4><div class="plan-text">${esc(p.products)}</div></div>` : ""}
     <div class="result-block"><h4>关键参数</h4><div class="param-grid">${params}</div></div>
     <div class="result-block"><h4>路线要求</h4><ul class="req-list">${reqs}</ul></div>

@@ -28,6 +28,7 @@ import time
 import traceback
 import uuid
 import webbrowser
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -59,6 +60,8 @@ PROCESS_KB_PATH = KB_DIR / "process_kb.json"
 PROCESS_KB_V3_PATH = KB_DIR / "process_kb_v3.json"
 DEMO_SAMPLES_V2_PATH = DATA_DIR / "demo_samples_v2.json"
 V2_DATA_PATH = DATA_DIR / "新数据库_635.xlsx"
+LLM_STEP_CACHE_PATH = DATA_DIR / "llm_step_cache.json"
+_LLM_CACHE_LOCK = threading.Lock()
 
 PRECISION_DEMO_IMAGES = [
     {"name": "case_a.jpg", "path": "tests/images/case_a.jpg", "label": "案例 A · 5 目标 / 3 块矸石"},
@@ -898,7 +901,8 @@ def call_anthropic(cfg: Dict, messages: List[Dict], timeout: int = 90) -> Dict:
             "protocol": "anthropic"}
 
 
-def call_llm(cfg: Dict, messages: List[Dict], timeout: int = 90) -> Dict:
+def call_llm(cfg: Dict, messages: List[Dict], timeout: int = 90,
+             max_tokens: int | None = None, thinking_disabled: bool = False) -> Dict:
     if (cfg.get("protocol") or ("anthropic" if "anthropic" in cfg["base_url"] else "openai")) == "anthropic":
         return call_anthropic(cfg, messages, timeout)
 
@@ -908,10 +912,15 @@ def call_llm(cfg: Dict, messages: List[Dict], timeout: int = 90) -> Dict:
     payload = {
         "model": cfg["model"],
         "messages": messages,
-        "temperature": 0.3,
+        "temperature": 0.25,
         "stream": False,
         "response_format": {"type": "json_object"},
     }
+    if max_tokens:
+        payload["max_tokens"] = int(max_tokens)
+    # GLM-4.5-flash defaults to a reasoning trace; disable it for fast structured plans.
+    if thinking_disabled and str(cfg.get("model", "")).lower().startswith("glm-4.5"):
+        payload["thinking"] = {"type": "disabled"}
     headers = {"Authorization": f"Bearer {cfg['api_key']}",
                "Content-Type": "application/json"}
     t0 = time.time()
@@ -1192,49 +1201,112 @@ def _extract_json(text: str):
     return None
 
 
+def local_step_details(chain, params, requirements):
+    """Knowledge-base fallback for per-step text when the online model is unavailable/rate-limited."""
+    chain = chain or []
+    items = list((params or {}).items())
+    reqs = requirements or []
+    out = []
+    for i, step in enumerate(chain):
+        picks = []
+        key_hint = str(step)
+        for k, v in items:
+            if any(t and (t in key_hint or t in str(k)) for t in
+                   ("破碎", "筛分", "粉磨", "粒径", "细度", "D50")) and any(t in str(k) for t in ("粒径", "细度", "D50", "球磨")):
+                picks.append((k, v))
+            elif any(t and t in key_hint for t in ("烧结", "煅烧", "活化", "焙烧")) and any(t in str(k) for t in ("温度", "保温", "升温")):
+                picks.append((k, v))
+            elif any(t and t in key_hint for t in ("激发", "水热", "晶化", "养护")) and any(t in str(k) for t in ("模数", "温度", "湿度", "龄期", "水胶", "碱")):
+                picks.append((k, v))
+            elif any(t and t in key_hint for t in ("浸出", "酸", "沉淀", "碳化")) and any(t in str(k) for t in ("酸", "液固", "温度", "压力", "CO2")): 
+                picks.append((k, v))
+            elif any(t and t in key_hint for t in ("混配", "配料", "掺", "成型")) and any(t in str(k) for t in ("掺量", "比例", "水", "压力")):
+                picks.append((k, v))
+        if not picks:
+            picks = items[i::max(1, len(chain))][:2]
+        parts = [f"{k} {v}" for k, v in picks[:2]]
+        text = "；".join(parts) if parts else "按路线给定参数执行并取样检测"
+        if reqs:
+            text += "；" + str(reqs[i % len(reqs)])
+        out.append({"step": step, "detail": text[:100]})
+    return out
+
+
 def llm_precision_plan(cfg: Dict, values: Dict, shaped: Dict, requirements: Dict) -> Dict:
-    """Call GLM for a final plan only; deliberately exclude rationale/reasoning in the output schema."""
+    """Use GLM only to expand the already-determined 8-step chain.
+
+    The route is fixed by the knowledge base; the model is not asked to select it.
+    Keeping this call to a compact step-details schema makes glm-4.5-flash much faster
+    and prevents it from drifting into rationale text.
+    """
     p = shaped.get("primary", {})
+    chain = p.get("process_chain") or []
+    cache_key = "|".join([
+        str(p.get("route_code", "")),
+        json.dumps(p.get("parameters") or {}, ensure_ascii=False, sort_keys=True),
+        json.dumps(requirements or {}, ensure_ascii=False, sort_keys=True),
+    ])
+    with _LLM_CACHE_LOCK:
+        cache = load_json(LLM_STEP_CACHE_PATH, {}) or {}
+    if isinstance(cache.get(cache_key), dict) and cache[cache_key].get("step_details"):
+        hit = dict(cache[cache_key])
+        hit["_cached"] = True
+        return hit
     prompt = {
-        "task": "根据已确定的煤矸石处理路线，输出可执行处理方案",
+        "task": "把已经确定的煤矸石处理工序链，扩写成每一步可执行的操作说明",
         "rules": [
-            "只输出处理方案，不解释为什么选这条路线，不输出推理过程",
+            "路线已经由知识库确定，不要改路线、不要重新选路线",
+            "只写每一步做什么、用什么参数、控制什么，不解释为什么选这条路线",
             "不得编造未给出的标准号、检测值或经济指标",
-            "按给定路线和工序链组织，不要改路线",
+            "step_details 必须恰好 8 条，step 与 process_chain 一一对应",
+            "每条 detail 30~70 个中文字符，尽量结合给定参数、要求、风险",
         ],
         "route": {"code": p.get("route_code"), "name": p.get("name"), "standard": p.get("standard")},
-        "process_chain": p.get("process_chain") or [],
+        "route_knowledge": p.get("basis", ""),
+        "process_chain": chain,
         "parameters": p.get("parameters") or {},
         "product": p.get("products"),
         "route_requirements": p.get("requirements") or [],
         "risk_findings": [{"title": r.get("title"), "message": r.get("message")} for r in shaped.get("risks", [])],
-        "indicators": values,
+        "indicators": {k: v for k, v in values.items() if k != "_codes"},
         "user_requirements": requirements,
         "output_schema": {
-            "summary": "一句到两句方案概述（只写做什么）",
-            "process_chain": ["八工序，按顺序"],
-            "parameters": {"参数名": "参数值"},
-            "quality_control": ["质量控制要点"],
-            "risk_control": ["风险控制/环保措施"],
-            "required_tests": ["必须补检项"],
+            "step_details": [
+                {"step": chain[0] if chain else "工序名", "detail": "该步操作/参数/控制要点，30~70字"}
+            ]
         },
+        "must_include": ["step_details"],
     }
     msg = [
-        {"role": "system", "content": "你是煤矸石处理工艺工程师。严格按已确定路线输出 JSON；只写处理方案，不写原因、不写分析、不写推理。"},
+        {"role": "system", "content": "你是煤矸石处理工艺工程师。严格输出 JSON，只输出 step_details；只写操作、参数、控制要点，不写原因、不写推理。"},
         {"role": "user", "content": json.dumps(prompt, ensure_ascii=False)},
     ]
-    res = call_llm(cfg, msg, timeout=90)
+    res = call_llm(cfg, msg, timeout=100, max_tokens=1000, thinking_disabled=True)
     obj = _extract_json(res.get("content", ""))
     if not isinstance(obj, dict):
         raise RuntimeError("模型返回不是合法 JSON")
-    out = {}
-    for k in ("summary", "process_chain", "parameters", "quality_control", "risk_control", "required_tests"):
-        if k in obj:
-            out[k] = obj[k]
-    if not out.get("summary") and not out.get("process_chain"):
-        raise RuntimeError("模型未返回方案字段")
-    out["_model"] = cfg.get("model")
-    out["_latency"] = res.get("latency")
+    details = obj.get("step_details")
+    if not isinstance(details, list) or not details:
+        raise RuntimeError("模型未返回 step_details")
+    clean = []
+    for i, x in enumerate(details):
+        if isinstance(x, dict):
+            step = str(x.get("step", "")).strip()
+            detail = str(x.get("detail", ""))
+        elif isinstance(x, str):
+            step, detail = "", x
+        else:
+            continue
+        if not step and i < len(chain):
+            step = chain[i]
+        clean.append({"step": step, "detail": detail})
+    if not clean:
+        raise RuntimeError("step_details 为空")
+    out = {"step_details": clean, "_model": cfg.get("model"), "_latency": res.get("latency")}
+    with _LLM_CACHE_LOCK:
+        cache = load_json(LLM_STEP_CACHE_PATH, {}) or {}
+        cache[cache_key] = {"step_details": clean, "_model": cfg.get("model")}
+        save_json(LLM_STEP_CACHE_PATH, cache)
     return out
 
 
@@ -1376,6 +1448,7 @@ def api_precision_batch():
             cfg["model"] = override["model"]
         use_llm = bool(data.get("use_llm", True)) and bool(cfg.get("configured"))
         results = []
+        jobs = []
         for i, item in enumerate(stones):
             values = _precision_values(item)
             codes = []
@@ -1391,17 +1464,41 @@ def api_precision_batch():
             shaped["similar_cases"] = find_similar_cases(values, shaped["primary"].get("route_code", ""), 3)
             shaped["values"] = {k: v for k, v in values.items() if k != "_codes"}
             shaped["requirements_echo"] = req
-            # 端口一只给方案，不回传“为什么选它”的理由/机理字段
+            results.append(shaped)
+            if use_llm:
+                jobs.append((len(results) - 1, values, shaped, req))
+        # 多个石头的工序展开并发请求，避免 3 块石头串行等待 3 倍 GLM 时延
+        if jobs:
+            with ThreadPoolExecutor(max_workers=min(3, len(jobs))) as ex:
+                futs = {ex.submit(llm_precision_plan, cfg, vals, sh, rq): idx
+                        for idx, vals, sh, rq in jobs}
+                for fut in as_completed(futs):
+                    idx = futs[fut]
+                    try:
+                        results[idx]["llm_plan"] = fut.result()
+                    except Exception as exc:
+                        results[idx]["llm_error"] = str(exc)
+        # 离线 / 429 / 超时兜底：每一步至少用知识库参数展开，避免工序图空白
+        for shaped in results:
+            p = shaped.get("primary", {})
+            chain = p.get("process_chain") or []
+            plan = shaped.get("llm_plan") or {}
+            details = plan.get("step_details") if isinstance(plan, dict) else None
+            if not isinstance(details, list) or len(details) < len(chain):
+                local = local_step_details(chain, p.get("parameters") or {}, p.get("requirements") or [])
+                if isinstance(details, list):
+                    by = {str(x.get("step", "")): x for x in details if isinstance(x, dict)}
+                    merged = []
+                    for i, step in enumerate(chain):
+                        merged.append(by.get(step) or local[i])
+                    local = merged
+                shaped["llm_plan"] = {"step_details": local, "_fallback": True}
+        # 端口一只给方案，不回传“为什么选它”的理由/机理字段
+        for shaped in results:
             shaped.get("primary", {}).pop("why", None)
             shaped.get("primary", {}).pop("basis", None)
             for alt in shaped.get("secondary", []):
                 alt.pop("why", None)
-            if use_llm:
-                try:
-                    shaped["llm_plan"] = llm_precision_plan(cfg, values, shaped, req)
-                except Exception as exc:
-                    shaped["llm_error"] = str(exc)
-            results.append(shaped)
         return jsonify(_json_safe({"ok": True, "results": results,
                                    "llm_configured": bool(cfg.get("configured")),
                                    "llm_model": cfg.get("model") if cfg.get("configured") else "",
