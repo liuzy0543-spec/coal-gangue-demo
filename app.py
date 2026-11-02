@@ -59,6 +59,12 @@ PROCESS_KB_PATH = KB_DIR / "process_kb.json"
 PROCESS_KB_V3_PATH = KB_DIR / "process_kb_v3.json"
 DEMO_SAMPLES_V2_PATH = DATA_DIR / "demo_samples_v2.json"
 V2_DATA_PATH = DATA_DIR / "新数据库_635.xlsx"
+
+PRECISION_DEMO_IMAGES = [
+    {"name": "case_a.jpg", "path": "tests/images/case_a.jpg", "label": "案例 A · 5 目标 / 3 块矸石"},
+    {"name": "case_b.jpg", "path": "tests/images/case_b.jpg", "label": "案例 B · 6 目标 / 4 块矸石"},
+    {"name": "case_c.jpg", "path": "tests/images/case_c.jpg", "label": "案例 C · 12 目标 / 5 块矸石"},
+]
 CONFIG_PATH = ROOT / "config.json"
 
 from kb_engine_v3 import recommend as kb_recommend, load_kb as load_kb_v3, ratios as kb_ratios
@@ -1340,6 +1346,7 @@ def api_precision_template():
     return jsonify({"ok": True, "samples": samples, "routes": kb.get("entries", []),
                     "risk_rules": kb.get("risk_rules", []), "version": kb.get("version", ""),
                     "metrics": app_state.get("metrics", {}),
+                    "demo_images": PRECISION_DEMO_IMAGES,
                     "llm": {"configured": cfg.get("configured", False), "model": cfg.get("model"),
                             "base_url": cfg.get("base_url"), "provider": cfg.get("provider")}})
 

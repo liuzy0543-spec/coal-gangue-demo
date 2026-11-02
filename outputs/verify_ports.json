@@ -31,6 +31,15 @@
       ]
     },
     {
+      "name": "端口一默认测试图",
+      "ok": true,
+      "detail": [
+        "case_a.jpg",
+        "case_b.jpg",
+        "case_c.jpg"
+      ]
+    },
+    {
       "name": "端口一精准匹配",
       "ok": true,
       "detail": "R12 · 破碎粉磨+燃煤/生物质耦合掺烧（发电与热能回收） · 8 工序 · 2 风险"

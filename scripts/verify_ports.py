@@ -98,6 +98,7 @@ def main():
 
         tpl = call("/api/precision/template")
         assert len(tpl.get("routes", [])) >= 12, "端口一路线不足"
+        assert len(tpl.get("demo_images", [])) >= 3, "端口一默认测试图不足"
         ps = tpl["samples"][0]
         xkeys = ["kaolinite", "quartz", "illite", "chlorite", "calcite", "pyrite"]
         body = {"chemical": ps["inputs"], "industrial": ps["inputs"], "xrd": {k: ps["inputs"].get(k) for k in xkeys},
@@ -107,6 +108,8 @@ def main():
         pr = call("/api/precision/recommend", body, timeout=120)
         p = pr.get("primary", {})
         assert p.get("route_code", "").startswith("R") and p.get("process_chain"), "端口一未返回完整方案"
+        report["checks"].append({"name": "端口一默认测试图", "ok": True,
+                                 "detail": [x.get("name") for x in tpl.get("demo_images", [])]})
         report["checks"].append({"name": "端口一精准匹配", "ok": True,
                                  "detail": f"{p.get('route_code')} · {p.get('name')} · {len(p.get('process_chain', []))} 工序 · {len(pr.get('risks', []))} 风险"})
 

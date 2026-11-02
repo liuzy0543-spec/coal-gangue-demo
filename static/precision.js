@@ -165,7 +165,8 @@ async function loadDemoImage() {
   $("#p1-detect-sub").textContent = "识别中…";
   $("#p1-to-forms").disabled = true;
   try {
-    const d = await api("/api/detect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: "tests/images/case_a.jpg", conf: 0.25, iou: 0.45 }) });
+    const path = $("#p1-demo-select").value || "tests/images/case_a.jpg";
+    const d = await api("/api/detect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path, conf: 0.25, iou: 0.45 }) });
     renderDetect(d);
     toast(`测试图识别完成：${P.gangue.length} 块矸石`, "ok");
   } catch (e) {
@@ -505,6 +506,8 @@ async function init() {
     $("#chip-kb").innerHTML = `<i class="dot"></i>知识库 <b>${(d.routes || []).length} 条</b>`;
     const sel = $("#p1-r-desired");
     sel.innerHTML += (d.routes || []).map((r) => `<option value="${esc(r.id)}">${esc(r.id)} · ${esc(r.name)}</option>`).join("");
+    const demo = $("#p1-demo-select");
+    demo.innerHTML = (d.demo_images || []).map((x) => `<option value="${esc(x.path)}">${esc(x.label || x.name)}</option>`).join("");
     renderLLMChip();
     fillConfig();
   } catch (e) {
