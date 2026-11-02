@@ -576,3 +576,11 @@ td.num, th.num { font-family: var(--mono); text-align: right; }
 .demo-picker { display:flex; align-items:center; gap:8px; margin-top:11px; padding:8px 10px; border:1px solid var(--line); border-radius:9px; background:rgba(255,255,255,.015); }
 .demo-picker .demo-label { font-size:10.5px; color:var(--dim); white-space:nowrap; }
 .demo-picker select { flex:1; min-width:160px; }
+.demo-title { font-size:10.5px; color:var(--dim); margin:12px 0 6px; }
+.demo-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.demo-card { display:flex; align-items:center; gap:8px; text-align:left; border:1px solid var(--line); border-radius:9px; padding:5px 6px; background:rgba(255,255,255,.015); color:var(--muted); cursor:pointer; transition:.18s; }
+.demo-card:hover, .demo-card.active { border-color:rgba(125,211,252,.55); background:rgba(56,189,248,.08); }
+.demo-card img { width:66px; height:48px; object-fit:cover; border-radius:6px; border:1px solid rgba(148,163,184,.18); flex:none; }
+.demo-card b { display:block; color:var(--ink); font-size:11px; line-height:1.4; }
+.demo-card small { display:block; color:var(--dim); font-size:9.5px; line-height:1.5; }
+@media (max-width:760px) { .demo-grid { grid-template-columns:1fr; } }

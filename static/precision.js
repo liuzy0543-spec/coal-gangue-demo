@@ -160,15 +160,17 @@ async function uploadFile(file) {
   }
 }
 
-async function loadDemoImage() {
+async function loadDemoImage(path) {
   clearDetectError();
   $("#p1-detect-sub").textContent = "识别中…";
   $("#p1-to-forms").disabled = true;
   try {
-    const path = $("#p1-demo-select").value || "tests/images/case_a.jpg";
+    path = path || "tests/images/case_a.jpg";
+    document.querySelectorAll("#p1-demo-grid [data-path]").forEach((el) => el.classList.toggle("active", el.dataset.path === path));
     const d = await api("/api/detect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path, conf: 0.25, iou: 0.45 }) });
     renderDetect(d);
-    toast(`测试图识别完成：${P.gangue.length} 块矸石`, "ok");
+    $("#p1-detect-sub").textContent = `${d.total} 个目标 · 矸石 ${P.gangue.length} 块 · ${path.split("/").pop()}`;
+    toast(`默认图识别完成：${P.gangue.length} 块矸石`, "ok");
   } catch (e) {
     showDetectError("识别失败：" + e.message);
     $("#p1-detect-sub").textContent = "识别失败";
@@ -506,8 +508,15 @@ async function init() {
     $("#chip-kb").innerHTML = `<i class="dot"></i>知识库 <b>${(d.routes || []).length} 条</b>`;
     const sel = $("#p1-r-desired");
     sel.innerHTML += (d.routes || []).map((r) => `<option value="${esc(r.id)}">${esc(r.id)} · ${esc(r.name)}</option>`).join("");
-    const demo = $("#p1-demo-select");
-    demo.innerHTML = (d.demo_images || []).map((x) => `<option value="${esc(x.path)}">${esc(x.label || x.name)}</option>`).join("");
+    const demo = $("#p1-demo-grid");
+    demo.innerHTML = (d.demo_images || []).map((x) => `<button type="button" class="demo-card" data-path="${esc(x.path)}">
+      <img src="/${esc(x.path)}" alt="${esc(x.name)}" loading="lazy">
+      <span><b>${esc((x.label || x.name).split("·")[0].trim())}</b><small>${esc((x.label || "").split("·").slice(1).join("·").trim() || x.name)}</small></span>
+    </button>`).join("");
+    demo.addEventListener("click", (e) => {
+      const card = e.target.closest("[data-path]");
+      if (card && card.dataset.path) loadDemoImage(card.dataset.path);
+    });
     renderLLMChip();
     fillConfig();
   } catch (e) {
@@ -520,7 +529,6 @@ async function init() {
   drop.addEventListener("drop", (e) => { const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) uploadFile(f); });
   $("#p1-file").addEventListener("change", (e) => { const f = e.target.files && e.target.files[0]; if (f) uploadFile(f); });
   $("#p1-btn-clear").addEventListener("click", () => { $("#p1-image-box").style.display = "none"; $("#p1-drop").style.display = ""; $("#p1-file").value = ""; P.detect = null; P.gangue = []; P.forms = []; $("#p1-to-forms").disabled = true; $("#p1-stone-body").innerHTML = `<tr><td colspan="5"><div class="empty" style="min-height:160px;border:0">上传图片后显示编号、类别和 D/L/G/T/S</div></td></tr>`; });
-  $("#p1-btn-demo").addEventListener("click", loadDemoImage);
   $("#p1-to-forms").addEventListener("click", () => { if (!P.forms.length) { toast("没有可填写报告的矸石", "err"); return; } P.idx = 0; showStep(2); });
   $("#p1-prev").addEventListener("click", prevForm);
   $("#p1-save-next").addEventListener("click", nextForm);
