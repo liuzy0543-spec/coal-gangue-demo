@@ -214,6 +214,13 @@
           <span class="sub" id="pred-sub">等待预测</span>
         </div>
         <div class="card-body tight">
+          <div class="thinking-panel" id="p2-predict-thinking">
+            <div class="thinking-ring"></div>
+            <h3>模型正在预测成分</h3>
+            <p>正在逐石读取实验指标并计算四氧化物…</p>
+            <div class="progress-track"><div id="p2-predict-thinking-bar"></div></div>
+            <div class="mono" id="p2-predict-thinking-pct">0%</div>
+          </div>
           <div id="pred-result">
             <div class="pred-empty"><div class="big">⚗</div>左侧每块矸石都有独立输入；点击「逐石成分预测」后<br>按 S01/S02… 分别给出 SiO₂ / Al₂O₃ / Fe₂O₃ / CaO 与区间</div>
           </div>
@@ -260,7 +267,7 @@
         <div class="card-body">
           <div class="thinking-panel" id="p2-thinking">
             <div class="thinking-ring"></div>
-            <h3>AI 正在根据知识库深度学习</h3>
+            <h3>模型正在结合知识库深度学习</h3>
             <p>正在逐石核对工艺窗口、风险规则与八工序参数…</p>
             <div class="progress-track"><div id="p2-thinking-bar"></div></div>
             <div class="mono" id="p2-thinking-pct">0%</div>

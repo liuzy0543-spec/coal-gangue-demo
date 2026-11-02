@@ -1666,6 +1666,7 @@ def api_detect():
 def api_predict():
     try:
         data = request.get_json(force=True, silent=True) or {}
+        time.sleep(2)
         res = predict_for_stones(data)
         return jsonify(res), (200 if res.get("ok") else 400)
     except Exception as exc:
@@ -1684,6 +1685,7 @@ def api_recommend():
     if not stones:
         return jsonify({"ok": False, "error": "没有可推荐的矸石（请先完成成分预测）"}), 400
     try:
+        time.sleep(2)
         result = recommend_stones_v3(stones, area, inputs, requirements)
         cfg = get_llm_config()
         override = data.get("llm") or {}

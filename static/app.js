@@ -626,6 +626,25 @@ function resetStep2() {
   $("#btn-recommend").disabled = true;
 }
 
+function p2PredictThinking() {
+  let pct = 0;
+  $("#p2-predict-thinking").classList.add("show");
+  $("#p2-predict-thinking-bar").style.width = "0%";
+  $("#p2-predict-thinking-pct").textContent = "0%";
+  clearInterval(window.__p2pt);
+  window.__p2pt = setInterval(() => {
+    pct = Math.min(94, pct + Math.max(0.8, (94 - pct) * 0.035));
+    $("#p2-predict-thinking-bar").style.width = pct.toFixed(0) + "%";
+    $("#p2-predict-thinking-pct").textContent = pct.toFixed(0) + "%";
+  }, 80);
+}
+function p2EndPredictThinking() {
+  clearInterval(window.__p2pt);
+  $("#p2-predict-thinking-bar").style.width = "100%";
+  $("#p2-predict-thinking-pct").textContent = "100%";
+  setTimeout(() => $("#p2-predict-thinking").classList.remove("show"), 240);
+}
+
 async function doPredict() {
   if (!S.detect) { toast("请先在第一步识别图片", "err"); return; }
   const stones = usableStones();
@@ -642,6 +661,7 @@ async function doPredict() {
   if (!area.name) { toast("请选择矿区", "err"); return; }
   const btn = $("#btn-predict");
   btn.disabled = true; btn.textContent = "逐石预测中…";
+  p2PredictThinking();
   try {
     const firstInputs = inputsByStone[stones[0].id];
     const d = await api("/api/predict", {
@@ -655,6 +675,7 @@ async function doPredict() {
         stage: $("#stage").value,
       }),
     });
+    p2EndPredictThinking();
     S.prediction = d;
     S.stoneInputs = inputsByStone;
     S.inputs = firstInputs;
@@ -666,6 +687,7 @@ async function doPredict() {
     }
     toast(`预测完成：${d.rows.length} 块矸石，各自独立中心值`, "ok");
   } catch (e) {
+    p2EndPredictThinking();
     toast("预测失败：" + e.message, "err");
   } finally {
     btn.disabled = false; btn.textContent = "⚡ 逐石成分预测";
@@ -778,7 +800,6 @@ async function doRecommend() {
         quality: S.detect.quality, use_llm: true,
       }),
     });
-    await new Promise((r) => setTimeout(r, Math.max(0, 2000 - (Date.now() - t0))));
     p2EndThinking();
     S.recommend = d;
     renderRecommend(d);
