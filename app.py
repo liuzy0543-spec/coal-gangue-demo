@@ -8,11 +8,12 @@
     python app.py --port 7881
 
 目录：
-    models/   YOLO 权重、四个氧化物模型、指标与输入 schema
-    data/     261 行建模数据（只读，供复训）
-    kb/       工艺知识库 + 山西矿区清单（可增补）
-    static/   前端页面
-    outputs/  上传图与标注结果图
+    models/      YOLO 权重 + 检测置信度统计（最终交付）
+    models_v2/   四个氧化物集成模型、指标与输入 schema
+    data/        635 行新库、v2 演示样品、工序展开缓存
+    kb/          R01~R12 工艺知识库 + 山西矿区清单
+    static/      首页、端口一、端口二前端
+    outputs/     上传图、标注结果图与验收报告
 """
 from __future__ import annotations
 
@@ -50,13 +51,8 @@ for d in (OUT, UPLOADS, ANNOTATED, TESTS / "images"):
 
 YOLO_PATH = MODELS / "yolo_coal_gangue.pt"
 CONF_STATS_PATH = MODELS / "conf_stats.json"
-METRICS_PATH = MODELS / "metrics.json"
-SCHEMA_PATH = MODELS / "input_schema.json"
 DATA_DIR = ROOT / "data"
-DEMO_PATH = DATA_DIR / "demo_sample.json"
-DEMO_SAMPLES_PATH = DATA_DIR / "demo_samples.json"
 AREAS_PATH = KB_DIR / "mining_areas.json"
-PROCESS_KB_PATH = KB_DIR / "process_kb.json"
 PROCESS_KB_V3_PATH = KB_DIR / "process_kb_v3.json"
 DEMO_SAMPLES_V2_PATH = DATA_DIR / "demo_samples_v2.json"
 V2_DATA_PATH = DATA_DIR / "新数据库_635.xlsx"
@@ -290,21 +286,16 @@ def load_cases_v2() -> List[Dict]:
 def load_models() -> None:
     import joblib
 
-    use_v2 = (MODELS_V2 / "sio2_model.joblib").exists()
-    base = MODELS_V2 if use_v2 else MODELS
+    base = MODELS_V2
     app_state["models"] = {
         "SiO2": joblib.load(base / "sio2_model.joblib"),
         "Al2O3": joblib.load(base / "al2o3_model.joblib"),
         "Fe2O3": joblib.load(base / "fe2o3_model.joblib"),
         "CaO": joblib.load(base / "cao_model.joblib"),
     }
-    if not use_v2:
-        xrd_path = MODELS / "al2o3_xrd_model.joblib"
-        if xrd_path.exists():
-            app_state["models"]["Al2O3_xrd"] = joblib.load(xrd_path)
     app_state["metrics"] = load_json(base / "metrics.json", {})
     app_state["schema"] = load_json(base / "input_schema.json", [])
-    app_state["model_source"] = "models_v2" if use_v2 else "models"
+    app_state["model_source"] = "models_v2"
     # full 635-record table for precision-port case retrieval
     try:
         app_state["cases_v2"] = load_cases_v2()
@@ -534,24 +525,11 @@ def predict_values(row: Dict) -> Dict:
     out = {}
     for t in ["SiO2", "Al2O3", "Fe2O3", "CaO"]:
         mt = metrics.get(t, {})
-        conditional = False
-        # legacy fallback: old Al2O3 XRD conditional model
-        if (t == "Al2O3" and "Al2O3_xrd" in models
-                and (_num(row.get("kaolinite")) or _num(row.get("高岭石")) or 0) > 0):
-            m = models["Al2O3_xrd"]
-            mt = metrics.get("Al2O3_xrd", mt)
-            conditional = True
-        else:
-            m = models[t]
+        m = models[t]
         try:
             val = _predict_artifact(m, df)
         except Exception:
             val = float("nan")
-        if conditional:
-            kaol = _num(row.get("kaolinite")) or _num(row.get("高岭石")) or 0.0
-            ill = _num(row.get("illite")) or _num(row.get("伊利石")) or 0.0
-            ub = (kaol * 0.395 + ill * 0.30) * 1.8 + 8.0
-            val = min(val, ub)
         val = float(np.clip(val, 0, 100))
         dom = (m.get("domain") or {}).get(t)
         domain_ok = True
@@ -563,7 +541,6 @@ def predict_values(row: Dict) -> Dict:
             "rmse": mt.get("RMSE_mean"),
             "mae": mt.get("MAE_mean"),
             "model": mt.get("model"),
-            "conditional": conditional,
             "coverage": mt.get("coverage"),
             "domain": dom,
             "domain_ok": domain_ok,
@@ -659,7 +636,7 @@ def predict_for_stones(payload: Dict) -> Dict:
 # 知识库 + 推荐
 # ---------------------------------------------------------------------------
 def load_process_kb() -> List[Dict]:
-    d = load_json(PROCESS_KB_V3_PATH, {}) or load_json(PROCESS_KB_PATH, {}) or {}
+    d = load_json(PROCESS_KB_V3_PATH, {}) or {}
     return d.get("entries", [])
 
 
@@ -1360,7 +1337,7 @@ def api_cases():
 
 @app.route("/api/demo_samples")
 def api_demo_samples():
-    doc = load_json(DEMO_SAMPLES_V2_PATH, {}) or load_json(DEMO_SAMPLES_PATH, {}) or {}
+    doc = load_json(DEMO_SAMPLES_V2_PATH, {}) or {}
     samples = doc.get("samples") or []
     if not samples:
         return jsonify({"ok": False, "error": "逐石示例文件缺失"}), 404
@@ -1378,23 +1355,6 @@ def api_demo_samples():
             }
         out.append({**s, "area": area})
     return jsonify({"ok": True, "note": doc.get("note", ""), "samples": out})
-
-
-@app.route("/api/demo_sample")
-def api_demo_sample():
-    doc = load_json(DEMO_PATH, {}) or {}
-    if not doc:
-        return jsonify({"ok": False, "error": "示例样品文件缺失"}), 404
-    areas = (load_json(AREAS_PATH, {}) or {}).get("areas", [])
-    area = next((a for a in areas if a.get("id") == doc.get("area_id")), None)
-    if area is None:
-        area = {
-            "id": doc.get("area_id") or "demo_area",
-            "name": f"{doc.get('city', '')}矿区" if doc.get("city") else "示例矿区",
-            "province": doc.get("province", "山西"),
-            "city": doc.get("city", ""),
-        }
-    return jsonify({"ok": True, "sample": {**doc, "area": area}})
 
 
 @app.route("/precision")
@@ -1617,7 +1577,7 @@ def api_home():
 def api_health():
     kb = load_kb_v3()
     return jsonify({"ok": True, "ready": app_state.get("ready", False),
-                    "model_source": app_state.get("model_source", "models"),
+                    "model_source": app_state.get("model_source", "models_v2"),
                     "models": list((app_state.get("models") or {}).keys()),
                     "kb_count": len(kb.get("entries", [])),
                     "kb_version": kb.get("version", ""),
@@ -1637,7 +1597,7 @@ def api_meta():
         "schema": app_state.get("schema", []),
         "metrics": app_state.get("metrics", {}),
         "areas": areas,
-        "kb_count": len(kb), "model_source": app_state.get("model_source", "models"),
+        "kb_count": len(kb), "model_source": app_state.get("model_source", "models_v2"),
         "llm": {"provider": cfg["provider"], "base_url": cfg["base_url"],
                 "model": cfg["model"], "protocol": cfg["protocol"],
                 "configured": cfg["configured"]},

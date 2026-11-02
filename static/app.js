@@ -474,12 +474,11 @@ function renderModelGrid(metrics) {
   const labels = { SiO2: "SiO₂ 二氧化硅", Al2O3: "Al₂O₃ 氧化铝", Fe2O3: "Fe₂O₃ 氧化铁", CaO: "CaO 氧化钙" };
   $("#model-grid").innerHTML = ["SiO2", "Al2O3", "Fe2O3", "CaO"].map((t) => {
     const m = metrics[t] || {};
-    const xrd = t === "Al2O3" ? (metrics.Al2O3_xrd || null) : null;
     const r2 = Number(m.R2_mean);
     const pct = Math.max(0, Math.min(100, isFinite(r2) ? Math.max(0, r2) * 100 : 0));
     return `<div class="model-card" title="${esc(m.note || "")}">
       <div class="top"><span class="name">${labels[t]}</span><span class="r2">R² ${isFinite(r2) ? (r2 >= 0 ? "+" : "") + r2.toFixed(3) : "—"}</span></div>
-      <div class="feat">${esc((m.features || []).slice(0, 5).join(" + "))}${(m.features || []).length > 5 ? ` 等 ${m.features.length} 项` : ""}<br>MAE ${fmt(m.MAE_mean, 2)} wt% · n=${m.n || "—"} / ${m.groups || "—"} 组${xrd ? `<br><span style="color:var(--cyan)">XRD 条件 R² +${Number(xrd.R2_mean).toFixed(3)} · n=${xrd.n}/${xrd.groups} 组</span>` : ""}</div>
+      <div class="feat">${esc((m.features || []).slice(0, 5).join(" + "))}${(m.features || []).length > 5 ? ` 等 ${m.features.length} 项` : ""}<br>MAE ${fmt(m.MAE_mean, 2)} wt% · n=${m.n || "—"} / ${m.groups || "—"} 组</div>
       <div class="meter"><i style="width:${pct}%"></i></div>
     </div>`;
   }).join("");
@@ -734,28 +733,21 @@ function renderPrediction(d) {
   }).join("");
 
   const mt = d.metrics || {};
-  const xrd = d.rows.some((r) => r.pred.Al2O3 && r.pred.Al2O3.conditional);
   const mtShow = { ...mt };
-  if (xrd) {
-    const p = d.rows.find((r) => r.pred.Al2O3 && r.pred.Al2O3.conditional).pred.Al2O3;
-    mtShow.Al2O3 = { ...(mtShow.Al2O3 || {}), R2_mean: p.r2 };
-  }
   $("#pred-result").innerHTML = `
     <div class="counts" style="margin-bottom:10px">
       <span class="count-pill">矿区 <b style="font-size:12px">${esc(d.area.name)}</b></span>
       <span class="count-pill">矸石 <b>${d.rows.length}</b></span>
       <span class="count-pill" style="border-color:var(--cyan)">逐石独立输入</span>
-      ${xrd ? `<span class="count-pill" style="border-color:var(--cyan)">Al₂O₃ XRD 条件模型</span>` : ""}
     </div>
     ${blocks}
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px">
       ${types.map(([k, n]) => `<div class="q-item" style="padding:7px 9px">
-        <div class="k"><span>${k === "Al2O3" && xrd ? "Al₂O₃*" : n}</span><span>R²</span></div>
+        <div class="k"><span>${n}</span><span>R²</span></div>
         <div class="v" style="font-size:12px">${mtShow[k] ? (mtShow[k].R2_mean >= 0 ? "+" : "") + mtShow[k].R2_mean.toFixed(3) : "—"}
           <small>±MAE ${fmt(mtShow[k] && mtShow[k].MAE_mean, 2)}</small></div>
       </div>`).join("")}
     </div>
-    ${xrd ? `<div class="notice green" style="margin-top:9px"><span>✧</span><span>已填高岭石定量：Al₂O₃ 使用 XRD 条件模型（R² ${Number(mtShow.Al2O3.R2_mean).toFixed(3)}，覆盖 55/261 条/14 组），并施加矿物学上界；未填高岭石时回退全表模型。</span></div>` : ""}
     <div class="notice cyan" style="margin-top:11px"><span>ⓘ</span><span>${esc(d.note)}</span></div>`;
 
   $("#step3-ready").className = "notice green";

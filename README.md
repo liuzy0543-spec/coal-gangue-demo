@@ -2,11 +2,14 @@
 
 一张图 / 一张化验单进去，得到 **煤矸石资源化路线 + 八工序 + 参数 + 风险拦截 + 相似标杆案例**。
 
-本版在 2026-10 的三步式视觉 Demo 上做了三件事：
+## 最终交付版包含
 
-1. **用 2026-11 新库重训四氧化物模型**：635 条真实记录中筛选 328 条 / 299 个来源组，1 个目标持平、3 个目标提升；
-2. **重写 R01~R12 知识库**：按总表 12 大标准路线 + 八工序 + 环保红线，增加含硫/高钙/重金属/放射性等一票否决规则；
-3. **新增端口一“化验单精准匹配”**：直接填 XRF / 工业分析 / XRD / 工艺要求，输出可执行方案；与端口二共用同一套 R01~R12 知识库。
+1. **浅色双端口首页**：平台介绍、两个端口选择、动态统计、路线分布、部分知识库/案例预览；
+2. **端口二 · 视觉粗筛**：YOLO 识别 → 逐石成分预测 → R01~R12 知识库推荐 → 全宽数据流图 + GLM 工序展开；
+3. **端口一 · 实验报告精准匹配**：图片识别 → 6 个子表逐石填写 → 逐石方案 + 数据流图 + 指标核对；
+4. **v2 四氧化物模型**：635 条真实记录筛选 328 条 / 299 组，按来源组 5 折 × 3 种子；
+5. **R01~R12 知识库 + 8 条风险门控**，含硫/高钙/重金属/放射性等一票否决；
+6. **一键验收**：`双端口一键检验.bat` / `scripts/verify_ports.py`。
 
 ---
 
@@ -40,7 +43,7 @@
 5. **思考动画**：生成时显示“AI 正在根据知识库深度学习”、转圈和 2 秒进度条；
 6. **模型配置**：右上角「模型配置」可填智谱 API Key；默认免费 `glm-4.5-flash`，未配置则离线知识库。
 
-**界面截图**：[平台首页](outputs/shots/30_home.png) ｜ [管理员登录](outputs/shots/37_auth_login.png) ｜ [端口一浅色](outputs/shots/33_port1_light.png) ｜ [端口二浅色](outputs/shots/34_port2_light.png) ｜ [端口一方案浅色](outputs/shots/35_port1_light_plan.png) ｜ [端口二方案浅色](outputs/shots/36_port2_light_plan.png) ｜ [平台首页全页](outputs/shots/31_home_full.png) ｜ [首页移动端](outputs/shots/32_home_mobile.png) ｜ [端口二逐石输入](outputs/shots/22_port2_inputs.png) ｜ [逐石误差弹窗](outputs/shots/23_port2_error.png) ｜ [端口二方案/数据流图](outputs/shots/29_port2_plan.png) ｜ [端口一图片识别](outputs/shots/25_port1_upload.png) ｜ [端口一逐石表单](outputs/shots/26_port1_form.png) ｜ [端口一方案/数据流图](outputs/shots/27_port1_plan.png) ｜ [端口一思考动画](outputs/shots/28_port1_thinking.png)
+**界面截图**：[平台首页](outputs/shots/30_home.png) ｜ [首页全页](outputs/shots/31_home_full.png) ｜ [首页移动端](outputs/shots/32_home_mobile.png) ｜ [管理员登录](outputs/shots/37_auth_login.png) ｜ [端口一浅色](outputs/shots/33_port1_light.png) ｜ [端口二浅色](outputs/shots/34_port2_light.png) ｜ [端口一方案浅色](outputs/shots/35_port1_light_plan.png) ｜ [端口二方案浅色](outputs/shots/36_port2_light_plan.png)
 
 ---
 
@@ -63,22 +66,17 @@
 
 ### 2.2 指标（按来源组 5 折 × 种子 42/7/2024，pooled OOF）
 
-| 目标 | 2026-10 旧模型 R² | **2026-11 v2 R²** | 变化 | MAE | 训练量 |
-|---|---:|---:|---:|---:|---:|
-| SiO₂ | 0.7272 | **0.7196** | −0.008（基本持平） | 3.45 | 328 / 299 组 |
-| Al₂O₃ | 0.2719 | **0.6410** | **+0.369** | 3.29 | 328 / 299 组 |
-| Fe₂O₃ | 0.3380 | **0.4298** | **+0.092** | 1.77 | 328 / 299 组 |
-| CaO | 0.1196 | **0.3535** | **+0.234** | 1.29 | 328 / 299 组 |
+| 目标 | **v2 R²** | MAE | 训练量 |
+|---|---:|---:|---:|
+| SiO₂ | **0.7196** | 3.45 | 328 / 299 组 |
+| Al₂O₃ | **0.6410** | 3.29 | 328 / 299 组 |
+| Fe₂O₃ | **0.4298** | 1.77 | 328 / 299 组 |
+| CaO | **0.3535** | 1.29 | 328 / 299 组 |
 
-- 模型：RidgeCV + XGBoost 集成；权重按 OOF 选择（不是拍脑袋）；
+- 模型：RidgeCV + XGBoost 集成；权重按 OOF 选择；
 - 特征：LOI、K₂O、MgO、Na₂O、TiO₂、SO₃、灰分、挥发分、固定碳、全硫、发热量、高岭石、石英、伊利石、绿泥石、方解石、黄铁矿、P₂O₅、`_den`；类别特征：省/市/煤田/样品状态/颜色/岩相；
-- **SiO₂ 没有提升**，与旧交付版基本持平；Al₂O₃ / Fe₂O₃ / CaO 提升明显。报告时如实写“3/4 提升，SiO₂ 持平”，不要把小差异说成显著提升。
-- **CaO 仍然偏弱（0.354）**：它受碳酸盐/石膏/pH 影响大，页面会提示结合区间和补检，不把它包装成高可信。
+- 如实说明：**Al₂O₃ / Fe₂O₃ / CaO 提升明显，SiO₂ 基本持平，CaO 仍然偏弱**；
 - 完整方法与复现见 **[模型重训报告_2026-11.md](模型重训报告_2026-11.md)**。
-
-### 2.3 为什么不用旧模型
-
-旧 SiO₂ 模型迁移到新库 328 条上 R² 仅约 0.255，说明旧模型吃的是旧 261 条的分布，不能用它来“保住 0.727”。本版统一用新库重训，避免新旧口径混用。
 
 ---
 
@@ -174,17 +172,30 @@ set GLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4
 app.py                       Flask 双端口后端
 kb_engine_v3.py              R01~R12 打分 + 风险门控引擎
 models_v2/                   v2 四目标集成模型 + metrics + schema
-models/                      旧 2026-10 模型（保留对照）
+models/                      YOLO 权重 + 检测置信度统计（最终交付）
 data/新数据库_635.xlsx       2026-11 全量总表（只读）
 data/demo_samples_v2.json    5 个真实演示样品（端口二默认/端口一示例）
-data/llm_step_cache.json     工序展开缓存（在线 GLM 结果，避免重复等待）
+data/llm_step_cache.json     工序展开缓存（在线 GLM 结果）
 kb/process_kb_v3.json        12 路线 + 8 风险规则
-static/index.html|js|css     端口二
-static/precision.html|js     端口一
-scripts/train_models_v2.py   可复现训练脚本
-scripts/verify_ports.py      双端口自检
+kb/mining_areas.json         山西矿区清单
+kb/README.md                 知识库最终说明
+static/index.html           浅色平台首页
+static/landing.css|js       首页样式与动态渲染
+static/vision.html          端口二 · 视觉粗筛
+static/precision.html       端口一 · 实验报告精准匹配
+static/app.js               端口二逻辑
+static/precision.js         端口一逻辑
+static/styles.css           端口基础样式
+static/port-light.css       端口浅色皮肤
+tests/images/               3 张默认演示图
+scripts/train_models_v2.py  可复现训练脚本
+scripts/build_kb_v3.py      知识库生成脚本
+scripts/verify_ports.py     双端口自检
 双端口一键检验.bat           一键验收
-README_2026-10_旧版.md       旧版说明（历史）
+README.md                   本说明
+模型重训报告_2026-11.md       v2 模型报告
+答辩演示脚本.md              最终版演示流程与边界话术
+config.example.json          GLM 配置模板（不含 Key）
 ```
 
 ---
@@ -218,5 +229,4 @@ https://github.com/liuzy0543-spec/coal-gangue-demo
 
 ## 9. 版本
 
-- 2026-11-01：双端口 + v2 模型 + R01~R12 KB + 风险门控 + 一键检验。
-- 2026-10：三步式视觉 Demo（旧版，见 `README_2026-10_旧版.md`）。
+当前为最终交付版：浅色首页 + 双端口 + v2 模型 + R01~R12 知识库 + GLM 工序展开 + 一键验收。
