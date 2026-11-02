@@ -425,6 +425,14 @@ def _num(v) -> Optional[float]:
         return None
 
 
+def _float_or(v, default: float) -> float:
+    try:
+        x = float(v)
+        return x if np.isfinite(x) else float(default)
+    except Exception:
+        return float(default)
+
+
 CITY_ALIAS = {
     "太原": "太原市", "晋中": "晋中市", "晋城": "晋城市", "长治": "长治市",
     "大同": "大同市", "朔州": "朔州市", "运城": "运城市", "临汾": "临汾市",
@@ -1393,8 +1401,15 @@ def api_examples():
 @app.route("/api/detect", methods=["POST"])
 def api_detect():
     try:
-        conf = float(request.form.get("conf", 0.25))
-        iou = float(request.form.get("iou", 0.45))
+        data = request.get_json(force=True, silent=True) or {}
+        raw_conf = request.form.get("conf")
+        if raw_conf in (None, ""):
+            raw_conf = data.get("conf", 0.25)
+        raw_iou = request.form.get("iou")
+        if raw_iou in (None, ""):
+            raw_iou = data.get("iou", 0.45)
+        conf = _float_or(raw_conf, 0.25)
+        iou = _float_or(raw_iou, 0.45)
         src = None
         if "file" in request.files and request.files["file"].filename:
             f = request.files["file"]
@@ -1403,7 +1418,6 @@ def api_detect():
             f.save(str(dst))
             src = dst
         else:
-            data = request.get_json(force=True, silent=True) or {}
             p = Path(data.get("path", ""))
             if p.is_file():
                 src = p

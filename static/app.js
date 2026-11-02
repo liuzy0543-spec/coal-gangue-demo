@@ -15,6 +15,7 @@ const S = {
   stoneRefs: {},
   stoneInputs: {},
   activeCase: null,
+  conf: 0.25,
 };
 
 const DEFAULT_LLM = {
@@ -506,14 +507,15 @@ async function detectByFile(file) {
   S.activeCase = null;
   const fd = new FormData();
   fd.append("file", file);
-  fd.append("conf", S.conf);
+  const conf = Number.isFinite(Number(S.conf)) ? Number(S.conf) : 0.25;
+  fd.append("conf", String(conf));
   fd.append("iou", "0.45");
   await runDetect(() => api("/api/detect", { method: "POST", body: fd }));
 }
 async function detectByPath(path) {
   return await runDetect(() => api("/api/detect", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path, conf: S.conf, iou: 0.45 }),
+    body: JSON.stringify({ path, conf: Number.isFinite(Number(S.conf)) ? Number(S.conf) : 0.25, iou: 0.45 }),
   }));
 }
 async function runDetect(fn) {
