@@ -1244,7 +1244,7 @@ def llm_precision_plan(cfg: Dict, values: Dict, shaped: Dict, requirements: Dict
     cache_key = "|".join([
         str(p.get("route_code", "")),
         json.dumps(p.get("parameters") or {}, ensure_ascii=False, sort_keys=True),
-        json.dumps(requirements or {}, ensure_ascii=False, sort_keys=True),
+        json.dumps({k: v for k, v in (requirements or {}).items() if k != "port"}, ensure_ascii=False, sort_keys=True),
     ])
     with _LLM_CACHE_LOCK:
         cache = load_json(LLM_STEP_CACHE_PATH, {}) or {}
@@ -1679,11 +1679,50 @@ def api_recommend():
     stones = [s for s in (data.get("stones") or []) if s.get("pred")]
     area = data.get("area") or {}
     inputs = data.get("inputs") or {}
-    requirements = data.get("requirements") or {}
+    requirements = {"desired_route": "", "priority": "balanced", "sulfur_control": False, "fine_grinding": False}
+    requirements.update(data.get("requirements") or {})
     if not stones:
         return jsonify({"ok": False, "error": "没有可推荐的矸石（请先完成成分预测）"}), 400
     try:
         result = recommend_stones_v3(stones, area, inputs, requirements)
+        cfg = get_llm_config()
+        override = data.get("llm") or {}
+        if override.get("api_key"):
+            cfg["api_key"] = override["api_key"].strip()
+            cfg["configured"] = True
+        if override.get("base_url"):
+            cfg["base_url"] = override["base_url"].rstrip("/")
+        if override.get("model"):
+            cfg["model"] = override["model"]
+        use_llm = bool(data.get("use_llm", True)) and bool(cfg.get("configured"))
+        req = dict(requirements or {})
+        req["port"] = "vision"
+        jobs = []
+        for r, s in zip(result.get("stones", []), stones):
+            vals = _values_from_inputs(s.get("pred") or {}, s.get("inputs") or inputs or {}, s.get("feature"))
+            if use_llm:
+                jobs.append((r, vals))
+            if not r.get("llm_plan"):
+                r["llm_plan"] = {"step_details": local_step_details(
+                    r.get("primary", {}).get("process_chain") or [],
+                    r.get("primary", {}).get("parameters") or {},
+                    r.get("primary", {}).get("requirements") or []), "_fallback": True}
+        if jobs:
+            with ThreadPoolExecutor(max_workers=min(3, len(jobs))) as ex:
+                futs = {ex.submit(llm_precision_plan, cfg, vals, r, req): r for r, vals in jobs}
+                for fut in as_completed(futs):
+                    r = futs[fut]
+                    try:
+                        r["llm_plan"] = fut.result()
+                    except Exception as exc:
+                        r["llm_error"] = str(exc)
+        for r in result.get("stones", []):
+            r.get("primary", {}).pop("why", None)
+            r.get("primary", {}).pop("basis", None)
+            for alt in r.get("secondary", []):
+                alt.pop("why", None)
+        result["llm_configured"] = bool(cfg.get("configured"))
+        result["llm_model"] = cfg.get("model") if cfg.get("configured") else ""
         return jsonify(_json_safe(result))
     except Exception as exc:
         traceback.print_exc()

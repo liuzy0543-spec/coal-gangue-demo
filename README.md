@@ -18,7 +18,9 @@
 - 每块矸石独立生成输入卡，带入第一步 CV 读到的 D/L/G/T/S；
 - 输入六项现场指标 + 可选工业分析/XRD，逐石预测 SiO₂ / Al₂O₃ / Fe₂O₃ / CaO；
 - 预测后弹出逐石误差（`|预测−真实|/真实`），并显示模型整体 R²；
-- 用 R01~R12 知识库逐石推荐，先跑风险门控，再按成分/比值/物性排序。
+- 用 R01~R12 知识库逐石推荐，先跑风险门控，再按成分/比值/物性排序；
+- 第三步与端口一同样布局：每块石一个方案卡，包含 SVG 八工序数据流图、逐工序 AI 展开、参数/要求/风险；
+- 生成前有 2 秒“AI 正在根据知识库深度学习”动画；在线 GLM 只展开工序，不写原因。
 
 ### 端口一 · 实验报告精准匹配（http://127.0.0.1:7880/precision）
 
@@ -29,7 +31,7 @@
 5. **思考动画**：生成时显示“AI 正在根据知识库深度学习”、转圈和 2 秒进度条；
 6. **模型配置**：右上角「模型配置」可填智谱 API Key；默认免费 `glm-4.5-flash`，未配置则离线知识库。
 
-**界面截图**：[端口二逐石输入](outputs/shots/22_port2_inputs.png) ｜ [逐石误差弹窗](outputs/shots/23_port2_error.png) ｜ [端口二工艺分化](outputs/shots/24_port2_recommend.png) ｜ [端口一图片识别](outputs/shots/25_port1_upload.png) ｜ [端口一逐石表单](outputs/shots/26_port1_form.png) ｜ [端口一方案/数据流图](outputs/shots/27_port1_plan.png) ｜ [端口一思考动画](outputs/shots/28_port1_thinking.png)
+**界面截图**：[端口二逐石输入](outputs/shots/22_port2_inputs.png) ｜ [逐石误差弹窗](outputs/shots/23_port2_error.png) ｜ [端口二方案/数据流图](outputs/shots/29_port2_plan.png) ｜ [端口一图片识别](outputs/shots/25_port1_upload.png) ｜ [端口一逐石表单](outputs/shots/26_port1_form.png) ｜ [端口一方案/数据流图](outputs/shots/27_port1_plan.png) ｜ [端口一思考动画](outputs/shots/28_port1_thinking.png)
 
 ---
 

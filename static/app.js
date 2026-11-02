@@ -762,6 +762,8 @@ async function doRecommend() {
   const btn = $("#btn-recommend");
   btn.disabled = true; btn.textContent = "生成中…";
   $("#rec-sub").textContent = "推理中…";
+  p2ThinkingProgress();
+  const t0 = Date.now();
   try {
     const curFeat = new Map(((S.detect && S.detect.stones) || []).map((s) => [s.id, s.feature]));
     const stones = S.prediction.rows.map((r) => ({
@@ -776,69 +778,132 @@ async function doRecommend() {
         quality: S.detect.quality, use_llm: true,
       }),
     });
+    await new Promise((r) => setTimeout(r, Math.max(0, 2000 - (Date.now() - t0))));
+    p2EndThinking();
     S.recommend = d;
     renderRecommend(d);
     markDone(3, true);
-    toast(d.mode === "llm" ? `工艺方案已生成（${d.model}）` : "已用离线知识库生成方案", "ok");
+    toast(d.llm_configured ? "已由 GLM + 知识库生成逐石方案" : "已用离线知识库生成方案", "ok");
   } catch (e) {
+    p2EndThinking();
     toast("生成失败：" + e.message, "err");
   } finally {
     btn.disabled = false; btn.textContent = "🧠 生成逐石工艺方案";
   }
 }
 
+function p2ThinkingProgress() {
+  let pct = 0;
+  $("#p2-thinking").classList.add("show");
+  $("#p2-thinking-bar").style.width = "0%";
+  $("#p2-thinking-pct").textContent = "0%";
+  clearInterval(window.__p2t);
+  window.__p2t = setInterval(() => {
+    pct = Math.min(94, pct + Math.max(0.7, (94 - pct) * 0.035));
+    $("#p2-thinking-bar").style.width = pct.toFixed(0) + "%";
+    $("#p2-thinking-pct").textContent = pct.toFixed(0) + "%";
+  }, 80);
+}
+function p2EndThinking() {
+  clearInterval(window.__p2t);
+  $("#p2-thinking-bar").style.width = "100%";
+  $("#p2-thinking-pct").textContent = "100%";
+  setTimeout(() => $("#p2-thinking").classList.remove("show"), 240);
+}
+
+function p2DetailText(d, step) {
+  let t = typeof d === "string" ? d : (d && d.detail) || "";
+  if (!t) return "";
+  if (step && t.startsWith(step)) t = t.slice(step.length).replace(/^[：:、,，\s]+/, "");
+  return t;
+}
+function p2Wrap(text, width = 9) {
+  const s = String(text || ""), out = [];
+  for (let i = 0; i < s.length; i += width) out.push(s.slice(i, i + width));
+  return out.slice(0, 3);
+}
+function p2FlowSVG(chain, code, details) {
+  const steps = chain || [];
+  const dlist = (details || []).map((d, i) => p2DetailText(d, steps[i]));
+  const nodes = ["原矸 / 预测指标", ...steps, "产品 / 去向"];
+  const cols = 5, rows = Math.ceil(nodes.length / cols);
+  const bw = 188, bh = 108, gapX = 20, gapY = 42, x0 = 24, y0 = 28;
+  const width = x0 * 2 + cols * bw + (cols - 1) * gapX;
+  const height = y0 * 2 + rows * bh + (rows - 1) * gapY;
+  const pos = [];
+  for (let i = 0; i < nodes.length; i++) {
+    const row = Math.floor(i / cols);
+    let col = i % cols;
+    if (row % 2 === 1) col = cols - 1 - col;
+    pos.push({ x: x0 + col * (bw + gapX), y: y0 + row * (bh + gapY) });
+  }
+  const ex = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  let svg = `<svg class="flow-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${ex(code)} 八工序数据流图">`;
+  svg += `<defs><marker id="arrow2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="rgba(125,211,252,.8)"/></marker></defs>`;
+  for (let i = 0; i < nodes.length - 1; i++) {
+    const a = pos[i], b = pos[i + 1], ay = a.y + bh / 2, by = b.y + bh / 2;
+    if (a.y === b.y) {
+      const right = b.x > a.x;
+      svg += `<line x1="${right ? a.x + bw : a.x}" y1="${ay}" x2="${right ? b.x - 4 : b.x + bw + 4}" y2="${by}" stroke="rgba(125,211,252,.45)" stroke-width="1.6" marker-end="url(#arrow2)"/>`;
+    } else {
+      svg += `<path d="M ${a.x + bw / 2} ${a.y + bh} L ${a.x + bw / 2} ${b.y - 14} L ${b.x + bw / 2} ${b.y - 14} L ${b.x + bw / 2} ${b.y - 4}" fill="none" stroke="rgba(125,211,252,.45)" stroke-width="1.6" marker-end="url(#arrow2)"/>`;
+    }
+  }
+  nodes.forEach((label, i) => {
+    const q = pos[i], start = i === 0, finish = i === nodes.length - 1;
+    const detail = start ? "图像 + 逐石预测成分输入" : finish ? "目标产品与去向" : (dlist[i - 1] || "按路线参数执行");
+    const fill = start || finish ? "rgba(34,197,94,.13)" : "rgba(56,189,248,.09)";
+    const stroke = start || finish ? "rgba(74,222,128,.55)" : "rgba(125,211,252,.4)";
+    svg += `<g><title>${ex(label + "：" + detail)}</title><rect x="${q.x}" y="${q.y}" width="${bw}" height="${bh}" rx="9" fill="${fill}" stroke="${stroke}"/>`;
+    svg += `<text x="${q.x + 10}" y="${q.y + 16}" fill="${start || finish ? "#86efac" : "#7dd3fc"}" font-size="9" font-family="monospace">${String(i).padStart(2, "0")} ${start ? "INPUT" : finish ? "OUTPUT" : "STEP"}</text>`;
+    p2Wrap(label, 9).slice(0, 2).forEach((line, k) => {
+      svg += `<text x="${q.x + 10}" y="${q.y + 32 + k * 12}" fill="#dbeafe" font-size="9.5" font-weight="600">${ex(line)}</text>`;
+    });
+    p2Wrap(detail, 18).slice(0, 3).forEach((line, k) => {
+      svg += `<text x="${q.x + 10}" y="${q.y + 61 + k * 12}" fill="#9fb3c8" font-size="7.5">${ex(line)}</text>`;
+    });
+    svg += `</g>`;
+  });
+  return svg + `</svg>`;
+}
+
 function renderRecommend(d) {
-  const mode = d.mode === "llm"
-    ? `<span class="chip ok" style="padding:2px 9px"><i class="dot"></i>在线 ${esc(d.model || "LLM")}</span>`
+  const online = d.llm_configured;
+  $("#rec-sub").innerHTML = online
+    ? `<span class="chip ok" style="padding:2px 9px"><i class="dot"></i>在线 ${esc(d.llm_model || "GLM")}</span>`
     : `<span class="chip warn" style="padding:2px 9px"><i class="dot"></i>离线知识库</span>`;
-  $("#rec-sub").innerHTML = `${mode} ${d.latency ? `<span style="margin-left:6px">${d.latency}s</span>` : ""}`;
-
-  const fb = d.fallback_reason ? `<div class="notice" style="margin-bottom:10px"><span>⚠</span><span>在线模型不可用，已回退离线知识库：${esc(d.fallback_reason)}</span></div>` : "";
-  const summary = d.summary ? `<div class="notice cyan" style="margin-bottom:10px"><span>✧</span><span>${esc(d.summary)}</span></div>` : "";
-
-  const cards = (d.stones || []).map((r) => {
+  const cards = (d.stones || []).map((r, i) => {
     const p = r.primary || {};
-    const subs = (r.secondary || []).map((x) => `<span class="sub-chip" title="${esc(x.why || "")}">${esc(x.name)}</span>`).join("");
-    const reg = { carbon: "炭质", high_al: "高铝", high_fe: "高铁", calcareous: "高钙", high_si: "高硅", aluminosilicate: "铝硅酸盐", low_grade: "低品位" }[r.regime] || r.regime || "";
-    const ratios = r.ratios || {};
-    const ratioText = Object.entries(ratios).map(([k, v]) => {
-      const n = { SI_AL: "Si/Al", CA_SI: "Ca/Si", FE_AL: "Fe/Al", LOI_ASH: "LOI/灰分" }[k] || k;
-      return `${n} ${v}`;
-    }).join(" · ");
-    const feat = r.feature || {};
-    const fchips = ["D", "L", "G", "T", "S"].map((k) => feat[k]
-      ? `<span class="phys-chip">${esc(chipText(feat[k]))}</span>` : "").join("");
-    return `<div class="rec-card">
-      <div class="rec-head">
-        <span class="id-badge">${esc(r.id)}</span>
-        <span class="mono" style="color:#7dd3fc;font-size:11px">${esc(p.route_code || "")}</span>
-        <span class="title">${esc(p.name || "—")}</span>
-        ${reg ? `<span class="chip" style="padding:1px 7px;font-size:10px">${esc(reg)}</span>` : ""}
-        <span class="conf ${esc(r.confidence || "中")}">可信度 ${esc(r.confidence || "中")}</span>
+    const plan = r.llm_plan || {};
+    const details = plan.step_details || [];
+    const chain = p.process_chain || [];
+    const stepNotes = chain.map((step, k) => {
+      const text = p2DetailText(details[k], step);
+      return text ? `<div class="step-note"><b>${String(k + 1).padStart(2, "0")} ${esc(step)}</b><span>${esc(text)}</span></div>` : "";
+    }).join("");
+    const params = Object.entries(p.parameters || {}).map(([k, v]) => `<div class="param-item"><b>${esc(k)}</b>${esc(v)}</div>`).join("") || "—";
+    const reqs = (p.requirements || []).map((x) => `<li>${esc(x)}</li>`).join("") || "<li>按标准小试/中试验证</li>";
+    const risks = (r.risks || []).map((x) => `<div class="risk-card ${x.severity === "high" ? "high" : ""}"><div class="rt">${x.severity === "high" ? "⛔" : "⚠"} ${esc(x.title)}</div><p>${esc(x.message)}</p></div>`).join("");
+    const tests = (r.required_tests || []).map((x) => `<span class="sub-chip">${esc(x)}</span>`).join("") || `<span style="color:var(--dim)">—</span>`;
+    return `<article class="plan-card">
+      <div class="plan-head">
+        <div class="plan-no">${String(i + 1).padStart(2, "0")}</div>
+        <div><div class="plan-stone">${esc(r.id)} · 矸石</div><div class="plan-title">${esc(p.name || "—")}</div></div>
+        <div class="plan-route">${esc(p.route_code || "")}<span>${esc(p.confidence || "中")}</span></div>
       </div>
-      <div class="rec-body">
-        ${ratioText ? `<div class="row"><span class="k">成分特征</span><div class="v mono" style="color:#7dd3fc;font-size:10.5px">${esc(ratioText)}</div></div>` : ""}
-        ${fchips ? `<div class="row"><span class="k">物性档位</span><div class="v"><div class="phys-chips">${fchips}</div></div></div>` : ""}
-        ${p.why ? `<div class="row"><span class="k">判断依据</span><div class="v">${esc(p.why)}</div></div>` : ""}
-        ${p.basis ? `<div class="row"><span class="k">机理依据</span><div class="v rec-note">${esc(p.basis)}</div></div>` : ""}
-        ${p.process ? `<div class="row"><span class="k">工艺路线</span><div class="v">${esc(p.process)}</div></div>` : ""}
-        ${p.products ? `<div class="row"><span class="k">目标产品</span><div class="v"><b>${esc(p.products)}</b></div></div>` : ""}
-        ${p.standard ? `<div class="row"><span class="k">对标标准</span><div class="v rec-note">${esc(p.standard)}</div></div>` : ""}
-        ${(p.requirements || []).length ? `<div class="row"><span class="k">路线要求</span><div class="v"><ul class="req-list">${p.requirements.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div></div>` : ""}
-        ${p.risk ? `<div class="row"><span class="k">落地风险</span><div class="v">${esc(p.risk)}</div></div>` : ""}
-        ${(r.risks || []).length ? `<div class="row"><span class="k">风险门控</span><div class="v">${r.risks.map((x) => `<span class="chip warn" style="margin:2px 3px 0 0;font-size:10px" title="${esc(x.message)}">${esc(x.title)}</span>`).join("")}</div></div>` : ""}
-        ${(r.required_tests || []).length ? `<div class="row"><span class="k">建议补检</span><div class="v" style="font-size:10.5px;color:var(--dim)">${r.required_tests.map(esc).join(" / ")}</div></div>` : ""}
-        ${(r.blocked || []).length ? `<div class="row"><span class="k">风险拦截</span><div class="v" style="font-size:10.5px;color:#fca5a5">${r.blocked.map((b) => `${esc(b.route_code)} ${esc(b.route_name)}`).join(" / ")}</div></div>` : ""}
-        ${subs ? `<div class="row"><span class="k">备选工艺</span><div class="v"><div class="sub-list">${subs}</div></div></div>` : ""}
-        ${p.ref ? `<div class="row"><span class="k">参考</span><div class="v rec-note">${esc(p.ref)}</div></div>` : ""}
-      </div>
-    </div>`;
+      <div class="plan-meta"><span class="chip" style="padding:1px 7px;font-size:10px">${esc(p.category || "")}</span><span class="mono" style="font-size:10px;color:var(--dim)">${esc(p.standard || "")}</span></div>
+      <div class="result-block"><h4>数据流图 · 八工序</h4>${p2FlowSVG(chain, p.route_code, details)}</div>
+      ${stepNotes ? `<div class="result-block"><h4>工序展开</h4><div class="step-notes">${stepNotes}</div></div>` : ""}
+      ${p.products ? `<div class="result-block"><h4>目标产品</h4><div class="plan-text">${esc(p.products)}</div></div>` : ""}
+      <div class="result-block"><h4>关键参数</h4><div class="param-grid">${params}</div></div>
+      <div class="result-block"><h4>路线要求</h4><ul class="req-list">${reqs}</ul></div>
+      ${risks}
+      <div class="result-block"><h4>必须补检</h4><div class="sub-list">${tests}</div></div>
+    </article>`;
   }).join("");
-
-  $("#rec-result").innerHTML = fb + summary + `<div class="rec-list">${cards}</div>
-    <div class="notice" style="margin-top:12px"><span>⚠</span><span>工艺阈值来自工程经验区间，落地前必须做<b>小试/中试</b>与重金属、放射性、安定性检测；模型成分误差会传导到工艺判断。</span></div>`;
-
-  // 知识库命中
+  $("#rec-result").innerHTML = `<div class="notice cyan" style="margin-bottom:10px"><span>✧</span><span>已按石头编号顺序生成 <b>${(d.stones || []).length}</b> 份处理方案；${online ? "在线 GLM 已对八工序逐步展开" : "离线知识库已对八工序逐步展开"}。方案只给处理步骤，不解释原因。</span></div>
+    <div class="plan-list">${cards}</div>
+    <div class="notice" style="margin-top:12px"><span>⚠</span><span>工艺阈值来自工程经验区间，落地前必须做小试/中试与重金属、放射性、安定性检测；模型成分误差会传导到工艺判断。</span></div>`;
   $("#kb-hits").innerHTML = (d.stones || []).map((r) => {
     const subs = (r.secondary || []).map((x) => esc(x.name)).join(" / ");
     return `<div style="margin-bottom:7px"><span class="id-badge" style="min-width:34px">${esc(r.id)}</span>

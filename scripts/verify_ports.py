@@ -89,7 +89,7 @@ def main():
         report["checks"].append({"name": "端口二四氧化物预测", "ok": True,
                                  "detail": f"{len(pred.get('rows', []))} 行；SiO2 R2={pred.get('rows', [{}])[0].get('pred', {}).get('SiO2', {}).get('r2')}"})
 
-        rec = call("/api/recommend", {"stones": pred["rows"], "inputs": sample["inputs"],
+        rec = call("/api/recommend", {"stones": pred["rows"], "inputs": sample["inputs"], "use_llm": False,
                                       "area": {"province": "山西", "city": "太原市", "coalfield": "西山煤田"}},
                    timeout=120)
         assert rec.get("ok") and all(r.get("primary", {}).get("route_code", "").startswith("R") for r in rec.get("stones", []))
