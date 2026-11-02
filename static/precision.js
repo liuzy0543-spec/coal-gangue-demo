@@ -452,7 +452,7 @@ function openMetrics(index) {
       <div><h4 style="color:#7dd3fc;font-size:11px">工业分析/热工</h4><table class="metric-table"><tbody>${ind}</tbody></table>
         <h4 style="color:#7dd3fc;font-size:11px;margin-top:10px">环境</h4><table class="metric-table"><tbody>${row("pH", d.environment.pH)}${row("重金属", d.environment.heavy_metal)}${row("放射性", d.environment.radioactivity)}</tbody></table></div>
     </div>
-    <div style="margin-top:10px"><h4 style="color:#7dd3fc;font-size:11px">XRD（可选）</h4><table class="metric-table"><tbody>${xrd || `<tr><td colspan="2">未填写</td></tr>`}</tbody></table></div>`;
+    <div style="margin-top:10px"><h4 style="color:#7dd3fc;font-size:11px">XRD（实验报告）</h4><table class="metric-table"><tbody>${xrd || `<tr><td colspan="2">未填写</td></tr>`}</tbody></table></div>`;
   $("#p1-metrics-modal").classList.add("show");
 }
 
