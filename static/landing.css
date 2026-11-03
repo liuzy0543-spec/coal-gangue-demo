@@ -266,3 +266,20 @@ button{font:inherit}
 .auth-logout{display:block;width:100%;margin-top:10px;border:1px solid #efd5d5;background:#fff7f7;color:#b35454;border-radius:8px;padding:8px;font-family:inherit;font-size:10.5px;font-weight:700;cursor:pointer}
 .auth-logout:hover{background:#fff0f0}
 @media (max-width:760px){.auth-card{padding:23px 19px 19px}.auth-card h3{font-size:20px}}
+/* supplied brand logo */
+.brand-logo{display:block;height:46px;width:auto;max-width:275px;object-fit:contain}
+.brand{min-width:280px}
+.port-grid{max-width:760px}
+.port-card.report{grid-column:1/-1;min-height:86px;background:linear-gradient(120deg,#0d7f86 0%,#126b79 58%,#15566b 100%);box-shadow:0 12px 26px rgba(18,107,121,.18)}
+.port-card.report .port-icon{background:rgba(255,255,255,.15)}
+.port-card.report .port-main{padding-right:30px}
+.port-card.report .port-main b{font-size:15px}
+.port-card.report .port-main small{max-width:660px}
+.port-card.report:after{right:-55px;bottom:-96px}
+@media (max-width:1050px){.brand-logo{height:43px}.brand{min-width:0}}
+@media (max-width:760px){
+  .brand-logo{height:37px;max-width:215px}
+  .port-grid{grid-template-columns:1fr}
+  .port-card.report{grid-column:auto;min-height:104px}
+  .port-card.report .port-main{padding-right:16px}
+}

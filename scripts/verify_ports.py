@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Two-port smoke check: health + port2 detect/predict/recommend + port1 precision."""
+"""Three-entry smoke check: health/home + port2 detect/predict/recommend + port1 precision + /report."""
 from __future__ import annotations
 import json
 import sys
@@ -70,6 +70,11 @@ def main():
         assert len(home.get("routes") or []) >= 5, "首页路线分布不足"
         report["checks"].append({"name": "首页动态数据", "ok": True,
                                  "detail": f"records={home['stats']['records']} routes={len(home.get('routes') or [])} cases={len(home.get('cases') or [])}"})
+
+        assert any(x.get("id") == "report" for x in home.get("ports", [])), "首页缺少端口三入口"
+        with urllib.request.urlopen(BASE + "/report", timeout=15) as _r:
+            assert _r.status == 200, "端口三页面不可访问"
+        report["checks"].append({"name": "端口三实验报告页", "ok": True, "detail": "/report 可直接访问"})
 
         samples = call("/api/demo_samples").get("samples", [])
         assert samples, "没有逐石示例"

@@ -12,6 +12,11 @@
       "detail": "records=635 routes=8 cases=4"
     },
     {
+      "name": "端口三实验报告页",
+      "ok": true,
+      "detail": "/report 可直接访问"
+    },
+    {
       "name": "端口二图像识别",
       "ok": true,
       "detail": "5 个目标 / 3 块矸石"
@@ -75,7 +80,8 @@
       "api": "/api",
       "home": "/",
       "port1": "/precision",
-      "port2": "/vision"
+      "port2": "/vision",
+      "port3": "/report"
     },
     "ready": true,
     "yolo_ready": true

@@ -11,17 +11,13 @@
   <header class="site-header">
     <div class="topbar">
       <a class="brand" href="/">
-        <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="20" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".25"/><path d="M10 30c6-14 12-18 24-18-2 12-9 21-24 18z" fill="currentColor" opacity=".9"/><path d="M16 30c2-6 6-10 12-13" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>
-        </span>
-        <span class="brand-name">研智配</span>
-        <span class="brand-divider"></span>
-        <span class="brand-tag">数据驱动 · 智能匹配 · 以废治废</span>
+        <img class="brand-logo" src="/static/assets/logo.png" alt="研智配 · 煤矸石资源化利用智能匹配平台">
       </a>
       <nav class="main-nav">
         <a class="active" href="#home">首页</a>
         <a href="/precision">精准匹配</a>
         <a href="/vision">视觉粗筛</a>
+        <a href="/report">实验报告</a>
         <a href="#kb">知识库</a>
         <a href="#cases">案例库</a>
         <a href="#about">关于平台</a>
@@ -60,11 +56,20 @@
             <span class="port-main"><b>端口二 · 视觉粗筛</b><small>基于图像识别，快速判断煤矸石特征、预测主要成分，并推荐利用路线。</small></span>
             <span class="port-arrow">→</span>
           </a>
+          <a class="port-card report" href="/report">
+            <span class="port-icon">
+              <svg viewBox="0 0 40 40"><path d="M11 7h13l7 7v19H11z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M24 7v8h7M16 20h10M16 25h10M16 30h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            <span class="port-main"><b>端口三 · 实验报告端</b><small>不做图像识别，直接从实验报告填写开始；适合已有 XRF / XRD / 工业分析数据的场景。</small></span>
+            <span class="port-arrow">→</span>
+          </a>
         </div>
         <div class="hero-foot">
           <span>已接入 <b id="hero-kb-count">12</b> 条标准路线</span>
           <span class="sep"></span>
           <span>覆盖 <b id="hero-records">635</b> 条真实煤矸石记录</span>
+          <span class="sep"></span>
+          <span><b>3</b> 个入口</span>
           <span class="sep"></span>
           <span class="live"><i></i>模型服务运行中</span>
         </div>
@@ -190,7 +195,7 @@
 
   <footer class="site-footer">
     <div class="footer-brand"><span class="brand-mark small"><svg viewBox="0 0 44 44"><path d="M10 30c6-14 12-18 24-18-2 12-9 21-24 18z" fill="currentColor"/></svg></span><b>研智配</b><span>煤矸石资源化利用智能匹配平台</span></div>
-    <div class="footer-links"><a href="/precision">端口一</a><a href="/vision">端口二</a><a href="#kb">知识库</a><a href="#cases">案例库</a><a href="/api/health" target="_blank">API 状态</a></div>
+    <div class="footer-links"><a href="/precision">端口一</a><a href="/vision">端口二</a><a href="/report">端口三</a><a href="#kb">知识库</a><a href="#cases">案例库</a><a href="/api/health" target="_blank">API 状态</a></div>
     <div class="footer-note">演示版 · 数据动态读取 · 结果用于工程筛选，不替代小试/中试</div>
   </footer>
 </div>

@@ -1,25 +1,26 @@
-# 煤矸石智能匹配平台 · 双端口 Demo（2026-11）
+# 煤矸石智能匹配平台 · 三端口 Demo（2026-11）
 
 一张图 / 一张化验单进去，得到 **煤矸石资源化路线 + 八工序 + 参数 + 风险拦截 + 相似标杆案例**。
 
 ## 最终交付版包含
 
-1. **浅色双端口首页**：平台介绍、两个端口选择、动态统计、路线分布、部分知识库/案例预览；
+1. **浅色三端口首页**：平台介绍、三个端口选择、动态统计、路线分布、部分知识库/案例预览；
 2. **端口二 · 视觉粗筛**：YOLO 识别 → 逐石成分预测 → R01~R12 知识库推荐 → 全宽数据流图 + GLM 工序展开；
 3. **端口一 · 实验报告精准匹配**：图片识别 → 6 个子表逐石填写 → 逐石方案 + 数据流图 + 指标核对；
-4. **v2 四氧化物模型**：635 条真实记录筛选 328 条 / 299 组，按来源组 5 折 × 3 种子；
-5. **R01~R12 知识库 + 8 条风险门控**，含硫/高钙/重金属/放射性等一票否决；
-6. **一键验收**：`双端口一键检验.bat` / `scripts/verify_ports.py`。
+4. **端口三 · 实验报告端**：跳过图像识别，直接从 6 个子表开始；支持逐块添加石头，适合已有化验数据的场景；
+5. **v2 四氧化物模型**：635 条真实记录筛选 328 条 / 299 组，按来源组 5 折 × 3 种子；
+6. **R01~R12 知识库 + 8 条风险门控**，含硫/高钙/重金属/放射性等一票否决；
+7. **一键验收**：`三端口一键检验.bat` / `scripts/verify_ports.py`。
 
 ---
 
-## 0. 首页 · 双端口导航（http://127.0.0.1:7880/）
+## 0. 首页 · 三端口导航（http://127.0.0.1:7880/）
 
-新的浅色平台首页参考“研智配”风格：顶部导航 + 品牌区 + 两个端口选择卡 + 能力区 + 工作流程 + 运行概况 + 路线分布 + 知识库/案例预览。首页数据由 `/api/home` 动态读取真实记录数、来源组、建模样本、路线分布、部分知识库条目和真实案例；两个端口可从这里直接进入。
+新的浅色平台首页参考“研智配”风格：顶部导航 + 品牌区 + 三个端口选择卡 + 能力区 + 工作流程 + 运行概况 + 路线分布 + 知识库/案例预览。首页数据由 `/api/home` 动态读取真实记录数、来源组、建模样本、路线分布、部分知识库条目和真实案例；三个端口可从这里直接进入。右上角品牌已使用新的「研智配」Logo。
 
 右上角「系统管理员」提供演示登录/注册：默认账号 `admin / admin123`，注册账号存本机 localStorage；仅做演示校验，不接真实账号系统。
 
-## 1. 两个端口
+## 1. 三个端口
 
 ### 端口二 · 视觉粗筛（http://127.0.0.1:7880/vision）
 
@@ -43,7 +44,15 @@
 5. **思考动画**：生成时显示“AI 正在根据知识库深度学习”、转圈和 2 秒进度条；
 6. **模型配置**：右上角「模型配置」可填智谱 API Key；默认免费 `glm-4.5-flash`，未配置则离线知识库。
 
-**界面截图**：[平台首页](outputs/shots/30_home.png) ｜ [首页全页](outputs/shots/31_home_full.png) ｜ [首页移动端](outputs/shots/32_home_mobile.png) ｜ [管理员登录](outputs/shots/37_auth_login.png) ｜ [端口一浅色](outputs/shots/33_port1_light.png) ｜ [端口二浅色](outputs/shots/34_port2_light.png) ｜ [端口一方案浅色](outputs/shots/35_port1_light_plan.png) ｜ [端口二方案浅色](outputs/shots/36_port2_light_plan.png)
+### 端口三 · 实验报告端（http://127.0.0.1:7880/report）
+
+- 跳过图像识别，页面直接从「实验报告」开始；
+- 默认带出库内样品，6 个子表逐块填写；
+- 支持「+ 添加一块石头」，可手动添加多块，不依赖图片；
+- 完成后按石头顺序生成方案、全宽数据流图和逐工序 AI 展开；
+- 适合已有 XRF / XRD / 工业分析数据、但没有现场图片的场景。
+
+**界面截图**：[三端口首页](outputs/shots/38_home_three_ports.png) ｜ [首页全页](outputs/shots/31_home_full.png) ｜ [首页移动端](outputs/shots/32_home_mobile.png) ｜ [管理员登录](outputs/shots/37_auth_login.png) ｜ [端口三表单](outputs/shots/39_port3_form.png) ｜ [端口三方案](outputs/shots/40_port3_plan.png) ｜ [端口一浅色](outputs/shots/33_port1_light.png) ｜ [端口二浅色](outputs/shots/34_port2_light.png) ｜ [端口一方案浅色](outputs/shots/35_port1_light_plan.png) ｜ [端口二方案浅色](outputs/shots/36_port2_light_plan.png)
 
 ---
 
@@ -121,16 +130,17 @@ python app.py
 - 首页：http://127.0.0.1:7880/
 - 端口二：http://127.0.0.1:7880/vision
 - 端口一：http://127.0.0.1:7880/precision
+- 端口三：http://127.0.0.1:7880/report
 - 健康检查：http://127.0.0.1:7880/api/health
 
-### 一键检验两个端口
+### 一键检验三个入口
 
-双击 **`双端口一键检验.bat`**：
+双击 **`三端口一键检验.bat`**：
 
 1. 检查 Python / 依赖；
 2. 7880 未启动时自动启动后端；
 3. 运行 `scripts/verify_ports.py`：健康检查 + 端口二 识别/预测/推荐 + 端口一精准匹配/批量方案 + 高硫强酸拦截；
-4. 优先用 **360 浏览器** 打开两个端口（找不到时回退 Edge/系统默认）；
+4. 优先用 **360 浏览器** 打开首页与端口一（端口二/端口三从首页进入；找不到时回退 Edge/系统默认）；
 5. 结果写入 `outputs/verify_ports.json`。
 
 也可以手动：
@@ -169,7 +179,7 @@ set GLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4
 ## 5. 目录
 
 ```
-app.py                       Flask 双端口后端
+app.py                       Flask 三端口后端
 kb_engine_v3.py              R01~R12 打分 + 风险门控引擎
 models_v2/                   v2 四目标集成模型 + metrics + schema
 models/                      YOLO 权重 + 检测置信度统计（最终交付）
@@ -180,9 +190,10 @@ kb/process_kb_v3.json        12 路线 + 8 风险规则
 kb/mining_areas.json         山西矿区清单
 kb/README.md                 知识库最终说明
 static/index.html           浅色平台首页
+static/assets/logo.png      新「研智配」Logo
 static/landing.css|js       首页样式与动态渲染
 static/vision.html          端口二 · 视觉粗筛
-static/precision.html       端口一 · 实验报告精准匹配
+static/precision.html       端口一/端口三共用实验报告页
 static/app.js               端口二逻辑
 static/precision.js         端口一逻辑
 static/styles.css           端口基础样式
@@ -190,8 +201,8 @@ static/port-light.css       端口浅色皮肤
 tests/images/               3 张默认演示图
 scripts/train_models_v2.py  可复现训练脚本
 scripts/build_kb_v3.py      知识库生成脚本
-scripts/verify_ports.py     双端口自检
-双端口一键检验.bat           一键验收
+scripts/verify_ports.py     三端口自检
+三端口一键检验.bat           一键验收
 README.md                   本说明
 模型重训报告_2026-11.md       v2 模型报告
 答辩演示脚本.md              最终版演示流程与边界话术
@@ -229,4 +240,4 @@ https://github.com/liuzy0543-spec/coal-gangue-demo
 
 ## 9. 版本
 
-当前为最终交付版：浅色首页 + 双端口 + v2 模型 + R01~R12 知识库 + GLM 工序展开 + 一键验收。
+当前为最终交付版：浅色首页 + 三端口 + v2 模型 + R01~R12 知识库 + GLM 工序展开 + 一键验收。

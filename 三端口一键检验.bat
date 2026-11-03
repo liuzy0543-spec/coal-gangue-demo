@@ -4,7 +4,7 @@ setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
 echo ============================================================
-echo   煤矸石智能匹配平台 · 双端口一键检验
+echo   煤矸石智能匹配平台 · 三端口一键检验
 echo   端口二：视觉粗筛（图像 - 四氧化物 - 工艺）
 echo   端口一：化验单精准匹配（XRF/工业分析/要求 - R01~R12）
 echo ============================================================
@@ -36,7 +36,7 @@ if errorlevel 1 (
   echo       后端已运行，直接复用。
 )
 
-echo [2/3] 运行双端口 API 自检...
+echo [2/3] 运行三端口 API 自检...
 "%PY%" -X utf8 scripts\verify_ports.py
 if errorlevel 1 (
   echo.
@@ -46,7 +46,7 @@ if errorlevel 1 (
 )
 
 echo.
-echo [3/3] 打开前端两个端口...
+echo [3/3] 打开前端首页与端口一（端口二/三从首页进入）...
 set "BROWSER="
 set "B360=%LOCALAPPDATA%\360Chrome\Chrome\Application\360chrome.exe"
 if exist "%B360%" set "BROWSER=%B360%"
@@ -82,9 +82,10 @@ if defined BROWSER (
 
 echo.
 echo ============================================================
-echo   [PASS] 两个端口均通过 API 自检。
+echo   [PASS] 三端口均通过 API 自检。
 echo   首页：   http://127.0.0.1:7880/
 echo   端口二： http://127.0.0.1:7880/vision
+echo   端口三： http://127.0.0.1:7880/report
 echo   端口一： http://127.0.0.1:7880/precision
 echo   健康检查： http://127.0.0.1:7880/api/health
 echo   自检报告： outputs\verify_ports.json

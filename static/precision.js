@@ -1,4 +1,6 @@
 /* 端口一 · 图片识别 → 逐石必填实验报告 → 逐石处理方案 */
+const IS_REPORT = location.pathname.replace(/\/+$/, "") === "/report";
+
 const P = {
   template: null, samples: [], detect: null, gangue: [], forms: [],
   idx: 0, module: 0, step: 1, results: [], thinkingTimer: null,
@@ -551,7 +553,7 @@ function renderResults(d) {
     return planBlock(r, i);
   }).join("");
   const llm = d.llm_configured ? `<span class="chip ok" style="padding:2px 8px;font-size:10px">在线 ${esc(d.llm_model || "GLM")}</span>` : `<span class="chip warn" style="padding:2px 8px;font-size:10px">离线知识库</span>`;
-  $("#p1-results").innerHTML = `<div class="notice cyan" style="margin-bottom:10px"><span>✧</span><span>已按图片编号顺序生成 <b>${(d.results || []).length}</b> 份处理方案；${llm}。方案只给处理步骤，不解释原因。双击任一方案查看本块实验指标。</span></div>
+  $("#p1-results").innerHTML = `<div class="notice cyan" style="margin-bottom:10px"><span>✧</span><span>已按${IS_REPORT ? "实验报告" : "图片编号"}顺序生成 <b>${(d.results || []).length}</b> 份处理方案；${llm}。方案只给处理步骤，不解释原因。双击任一方案查看本块实验指标。</span></div>
     <div class="plan-list">${cards}</div>
     <div class="notice" style="margin-top:12px"><span>⚠</span><span>方案用于工程筛选，不替代小试/中试与重金属、放射性、安定性检测；缺项实验报告不会生成方案。</span></div>`;
   document.querySelectorAll(".plan-card").forEach((el) => el.addEventListener("dblclick", () => openMetrics(Number(el.dataset.planIndex))));
@@ -615,6 +617,68 @@ function renderLLMChip() {
   $("#chip-llm").innerHTML = `<i class="dot"></i>模型 <b>${llm.configured ? esc(llm.model || "GLM") : "离线规则"}</b>`;
 }
 
+/* ---------------- 端口三：只保留实验报告 + 方案 ---------------- */
+function makeReportStone(index) {
+  return {
+    id: `R${String(index + 1).padStart(2, "0")}`,
+    cls: 1, cls_name: "矸石", conf: 1.0,
+    feature: {},
+  };
+}
+function buildReportForms() {
+  P.forms = [makeForm(makeReportStone(0), 0)];
+  P.idx = 0;
+  P.module = 0;
+  P.results = [];
+  P.detect = null;
+  P.gangue = [];
+}
+function setupReportMode() {
+  document.title = "端口三 · 实验报告端 · 煤矸石智能匹配平台";
+  const brand = document.querySelector(".brand h1");
+  if (brand) brand.innerHTML = "煤矸石 <span>智能匹配平台 · 实验报告端</span>";
+  const sub = document.querySelector(".brand p");
+  if (sub) sub.textContent = "Port 3 · 实验报告 → 逐石处理方案（无需图片）";
+  const eyebrow = document.querySelector(".precision-hero .eyebrow");
+  if (eyebrow) eyebrow.textContent = "PORT 3 · EXPERIMENT REPORT ONLY";
+  const h2 = document.querySelector(".precision-hero h2");
+  if (h2) h2.textContent = "逐块填写实验报告 → 逐块生成方案";
+  const lead = document.querySelector(".precision-hero p");
+  if (lead) lead.textContent = "端口三跳过图像识别，直接从实验报告填写开始；可直接使用库内默认值，也可逐块修改或添加石头。全部必填项完成后，按石头顺序输出处理方案与数据流图。";
+  const t1 = document.querySelector('.p1-step-tab[data-step="1"]');
+  if (t1) t1.style.display = "none";
+  const t2 = document.querySelector('.p1-step-tab[data-step="2"]');
+  if (t2) t2.innerHTML = "<b>01</b><span>实验报告</span>";
+  const t3 = document.querySelector('.p1-step-tab[data-step="3"]');
+  if (t3) t3.innerHTML = "<b>02</b><span>处理方案</span>";
+  const step1 = $("#p1-step-1");
+  if (step1) step1.style.display = "none";
+  $("#p1-add-stone").style.display = "";
+  $("#p1-restart").textContent = "重新填写实验报告";
+  buildReportForms();
+  fillForm(0, 0);
+  showStep(2);
+}
+function addReportStone() {
+  saveCurrent(false);
+  const n = P.forms.length;
+  P.forms.push(makeForm(makeReportStone(n), n));
+  P.idx = n;
+  P.module = 0;
+  P.results = [];
+  $("#p1-results").style.display = "none";
+  fillForm(n, 0);
+  toast(`已添加第 ${n + 1} 块石头，当前共 ${P.forms.length} 块`, "ok");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+function resetReportMode() {
+  buildReportForms();
+  $("#p1-results").style.display = "none";
+  $("#p1-results").innerHTML = "";
+  fillForm(0, 0);
+  showStep(2);
+}
+
 /* ---------------- 初始化 ---------------- */
 async function init() {
   try {
@@ -636,6 +700,7 @@ async function init() {
     });
     renderLLMChip();
     fillConfig();
+    if (IS_REPORT) setupReportMode();
   } catch (e) {
     toast("模板加载失败：" + e.message, "err");
   }
@@ -647,11 +712,16 @@ async function init() {
   $("#p1-file").addEventListener("change", (e) => { const f = e.target.files && e.target.files[0]; if (f) uploadFile(f); });
   $("#p1-btn-clear").addEventListener("click", () => { $("#p1-image-box").style.display = "none"; $("#p1-drop").style.display = ""; $("#p1-file").value = ""; P.detect = null; P.gangue = []; P.forms = []; $("#p1-to-forms").disabled = true; $("#p1-stone-body").innerHTML = `<tr><td colspan="5"><div class="empty" style="min-height:160px;border:0">上传图片后显示编号、类别和 D/L/G/T/S</div></td></tr>`; });
   $("#p1-to-forms").addEventListener("click", () => { if (!P.forms.length) { toast("没有可填写报告的矸石", "err"); return; } P.idx = 0; P.module = 0; showStep(2); });
+  $("#p1-add-stone").addEventListener("click", addReportStone);
   $("#p1-prev").addEventListener("click", prevForm);
   $("#p1-save-next").addEventListener("click", nextForm);
   $("#p1-generate").addEventListener("click", generatePlans);
   $("#p1-back-forms").addEventListener("click", () => showStep(2));
-  $("#p1-restart").addEventListener("click", () => { P.results = []; P.forms = []; P.detect = null; showStep(1); $("#p1-image-box").style.display = "none"; $("#p1-drop").style.display = ""; $("#p1-to-forms").disabled = true; });
+  $("#p1-restart").addEventListener("click", () => {
+    if (IS_REPORT) { resetReportMode(); return; }
+    P.results = []; P.forms = []; P.detect = null; showStep(1);
+    $("#p1-image-box").style.display = "none"; $("#p1-drop").style.display = ""; $("#p1-to-forms").disabled = true;
+  });
   $("#btn-config").addEventListener("click", () => { fillConfig(); $("#p1-config-modal").classList.add("show"); });
   $("#p1-cfg-save").addEventListener("click", () => saveConfig(false));
   $("#p1-cfg-test").addEventListener("click", () => saveConfig(true));

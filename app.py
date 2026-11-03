@@ -1024,7 +1024,7 @@ def llm_recommend(stones: List[Dict], area: Dict, inputs: Dict, quality: Dict,
 
 
 # ---------------------------------------------------------------------------
-# v3 双端口：R01~R12 知识库 + 端口一高精匹配
+# v3 三端口：R01~R12 知识库 + 端口一/三高精匹配
 # ---------------------------------------------------------------------------
 def _values_from_inputs(pred: Dict, inputs: Dict, feature: Dict = None) -> Dict:
     vals = {}
@@ -1362,6 +1362,11 @@ def precision_page():
     return send_from_directory(str(ROOT / "static"), "precision.html")
 
 
+@app.route("/report")
+def report_page():
+    return send_from_directory(str(ROOT / "static"), "precision.html")
+
+
 @app.route("/api/precision/template")
 def api_precision_template():
     doc = load_json(DEMO_SAMPLES_V2_PATH, {}) or {}
@@ -1556,6 +1561,9 @@ def home_payload() -> Dict:
             {"id": "vision", "name": "端口二 · 视觉粗筛", "href": "/vision",
              "desc": "基于图像识别，快速判断煤矸石特征、预测主要成分，并推荐利用路线。",
              "accent": "green"},
+            {"id": "report", "name": "端口三 · 实验报告端", "href": "/report",
+             "desc": "跳过图像识别，直接从实验报告填写开始，适合已有 XRF / XRD / 工业分析数据。",
+             "accent": "teal"},
         ],
         "workflow": [
             {"no": "1", "title": "上传数据 / 图像", "desc": "上传化验数据或煤矸石图像"},
@@ -1582,7 +1590,7 @@ def api_health():
                     "kb_count": len(kb.get("entries", [])),
                     "kb_version": kb.get("version", ""),
                     "yolo_ready": app_state.get("model") is not None,
-                    "ports": {"home": "/", "port2": "/vision", "port1": "/precision", "api": "/api"}})
+                    "ports": {"home": "/", "port1": "/precision", "port2": "/vision", "port3": "/report", "api": "/api"}})
 
 
 @app.route("/api/meta")
