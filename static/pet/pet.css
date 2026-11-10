@@ -1,4 +1,4 @@
-#dsh-pet-widget{position:fixed;left:auto;right:22px;bottom:18px;z-index:60;display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-family:"Microsoft YaHei","PingFang SC",sans-serif;pointer-events:none;transition:opacity .2s}
+#dsh-pet-widget{position:fixed;left:auto;top:auto;right:auto;bottom:auto;width:max-content;z-index:60;display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-family:"Microsoft YaHei","PingFang SC",sans-serif;pointer-events:none;transition:opacity .2s}
 #dsh-pet-widget *{box-sizing:border-box}
 .pet-bubble{position:relative;max-width:245px;margin-right:16px;padding:8px 11px;border:1px solid #cfe9e4;border-radius:11px 11px 3px 11px;background:rgba(255,255,255,.95);color:#41646c;font-size:10.5px;line-height:1.65;box-shadow:0 8px 24px rgba(17,75,88,.12);pointer-events:auto;backdrop-filter:blur(8px)}
 .pet-bubble b{display:block;color:#1a8d76;font-size:9px;letter-spacing:.4px;margin-bottom:2px}
