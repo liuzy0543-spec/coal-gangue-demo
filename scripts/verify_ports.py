@@ -74,7 +74,10 @@ def main():
         assert any(x.get("id") == "report" for x in home.get("ports", [])), "首页缺少端口三入口"
         with urllib.request.urlopen(BASE + "/report", timeout=15) as _r:
             assert _r.status == 200, "端口三页面不可访问"
-        report["checks"].append({"name": "端口三实验报告页", "ok": True, "detail": "/report 可直接访问"})
+        for path, name in [("/auto", "智能入口页"), ("/pet/assets/idle.webm", "绿色桌宠资源")]:
+            with urllib.request.urlopen(BASE + path, timeout=15) as _r:
+                assert _r.status == 200, f"{name}不可访问"
+        report["checks"].append({"name": "智能入口与桌宠", "ok": True, "detail": "/auto + /pet/assets 可直接访问"})
 
         samples = call("/api/demo_samples").get("samples", [])
         assert samples, "没有逐石示例"
@@ -105,6 +108,7 @@ def main():
                                       "area": {"province": "山西", "city": "太原市", "coalfield": "西山煤田"}},
                    timeout=120)
         assert rec.get("ok") and all(r.get("primary", {}).get("route_code", "").startswith("R") for r in rec.get("stones", []))
+        assert all((r.get("budget") or {}).get("total_low", 0) > 0 for r in rec.get("stones", [])), "端口二缺少预算"
         report["checks"].append({"name": "端口二 R01~R12 推荐", "ok": True,
                                  "detail": [r["primary"]["route_code"] for r in rec.get("stones", [])]})
 
@@ -132,6 +136,7 @@ def main():
         ]}
         bt = call("/api/precision/batch", batch_body, timeout=120)
         assert bt.get("ok") and bt.get("results") and bt["results"][0].get("primary", {}).get("process_chain"), "端口一批量方案失败"
+        assert (bt["results"][0].get("budget") or {}).get("total_low", 0) > 0, "端口一缺少预算"
         report["checks"].append({"name": "端口一逐石批量方案", "ok": True,
                                  "detail": f"{len(bt['results'])} 份；{bt['results'][0]['primary']['route_code']}；{len(bt['results'][0]['primary']['process_chain'])} 工序"})
 

@@ -10,7 +10,10 @@
 4. **端口三 · 实验报告端**：跳过图像识别，直接从 6 个子表开始；支持逐块添加石头，适合已有化验数据的场景；
 5. **v2 四氧化物模型**：635 条真实记录筛选 328 条 / 299 组，按来源组 5 折 × 3 种子；
 6. **R01~R12 知识库 + 8 条风险门控**，含硫/高钙/重金属/放射性等一票否决；
-7. **一键验收**：`三端口一键检验.bat` / `scripts/verify_ports.py`。
+7. **智能入口**：`/auto` 根据“图片 + 化验数据”的组合自动分流到三个端口；
+8. **投资概算**：每道工序给出设备/安装预算区间，最后汇总整套流程总预算，并标注公开市场来源；
+9. **绿色桌宠**：dsh-pet 绿色皮肤（CSS 色相重映射）默认出现在首页；
+10. **一键运行**：`一键运行.bat`。
 
 ---
 
@@ -20,7 +23,17 @@
 
 右上角「系统管理员」提供演示登录/注册：默认账号 `admin / admin123`，注册账号存本机 localStorage；仅做演示校验，不接真实账号系统。
 
-## 1. 三个端口
+## 1. 三个端口 + 智能入口
+
+### 智能入口 · 自动分流（http://127.0.0.1:7880/auto）
+
+- 顶部必须先三选一（端口一 / 端口二 / 端口三），并满足该端口最低输入；未选/未填会弹窗阻断；
+- 端口一：至少 1 张图片 + 3 项化验指标；
+- 端口二：至少 1 张图片；
+- 端口三：至少 3 项化验指标；
+- 下方「演示数据」提供三个一键填写按钮，方便 demo；该区块可整块删除，不影响手动输入；
+- 带入的数据通过本机 localStorage 传递，不写入 URL；
+- 首页 Hero 下方也有「不知道该选哪个端口？」直接入口。
 
 ### 端口二 · 视觉粗筛（http://127.0.0.1:7880/vision）
 
@@ -52,7 +65,7 @@
 - 完成后按石头顺序生成方案、全宽数据流图和逐工序 AI 展开；
 - 适合已有 XRF / XRD / 工业分析数据、但没有现场图片的场景。
 
-**界面截图**：[三端口首页](outputs/shots/38_home_three_ports.png) ｜ [首页全页](outputs/shots/31_home_full.png) ｜ [首页移动端](outputs/shots/32_home_mobile.png) ｜ [管理员登录](outputs/shots/37_auth_login.png) ｜ [端口三表单](outputs/shots/39_port3_form.png) ｜ [端口三方案](outputs/shots/40_port3_plan.png) ｜ [端口一浅色](outputs/shots/33_port1_light.png) ｜ [端口二浅色](outputs/shots/34_port2_light.png) ｜ [端口一方案浅色](outputs/shots/35_port1_light_plan.png) ｜ [端口二方案浅色](outputs/shots/36_port2_light_plan.png)
+**界面截图**：[三端口首页](outputs/shots/38_home_three_ports.png) ｜ [绿色桌宠](outputs/shots/42_pet_home.png) ｜ [智能入口](outputs/shots/44_auto_page.png) ｜ [智能入口全页](outputs/shots/45_auto_full.png) ｜ [逐工序预算](outputs/shots/43_budget_plan.png) ｜ [桌宠右键菜单](outputs/shots/46_pet_menu.png) ｜ [首页全页](outputs/shots/31_home_full.png) ｜ [首页移动端](outputs/shots/32_home_mobile.png) ｜ [管理员登录](outputs/shots/37_auth_login.png) ｜ [端口三表单](outputs/shots/39_port3_form.png) ｜ [端口三方案](outputs/shots/40_port3_plan.png) ｜ [端口一浅色](outputs/shots/33_port1_light.png) ｜ [端口二浅色](outputs/shots/34_port2_light.png) ｜ [端口一方案浅色](outputs/shots/35_port1_light_plan.png) ｜ [端口二方案浅色](outputs/shots/36_port2_light_plan.png)
 
 ---
 
@@ -85,7 +98,7 @@
 - 模型：RidgeCV + XGBoost 集成；权重按 OOF 选择；
 - 特征：LOI、K₂O、MgO、Na₂O、TiO₂、SO₃、灰分、挥发分、固定碳、全硫、发热量、高岭石、石英、伊利石、绿泥石、方解石、黄铁矿、P₂O₅、`_den`；类别特征：省/市/煤田/样品状态/颜色/岩相；
 - 如实说明：**Al₂O₃ / Fe₂O₃ / CaO 提升明显，SiO₂ 基本持平，CaO 仍然偏弱**；
-- 完整方法与复现见 **[模型重训报告_2026-11.md](模型重训报告_2026-11.md)**。
+- 完整方法、筛选条件与复现命令见本 README 的「模型可复现」与下方目录说明。
 
 ---
 
@@ -131,7 +144,12 @@ python app.py
 - 端口二：http://127.0.0.1:7880/vision
 - 端口一：http://127.0.0.1:7880/precision
 - 端口三：http://127.0.0.1:7880/report
+- 智能入口：http://127.0.0.1:7880/auto
 - 健康检查：http://127.0.0.1:7880/api/health
+
+### 一键运行
+
+双击 **`一键运行.bat`**：检查 Python → 未启动则自动启动后端 → 等待健康检查 → 优先用 360 浏览器打开首页 → 显示全部入口地址。
 
 ### 一键检验三个入口
 
@@ -148,6 +166,23 @@ python app.py
 ```bat
 python scripts/verify_ports.py
 ```
+
+### 预算与数据流图
+
+- 方案卡里的八工序节点会显示该步预算区间；
+- 下方「投资概算 · 分步到总包」逐行列出工序、预算区间、包含范围；
+- 最后汇总设备、工程安装、预备费和整套流程总预算；
+- 预算数字由公开市场设备/项目投资区间参数化生成（5 t/h 演示线口径），不是 LLM 编造，也不等于供应商报价；来源链接可在方案卡中展开；
+- 数据流图仍是深色内嵌，但增加了成本标签，并保持全宽布局。
+
+### 绿色桌宠
+
+- 首页默认显示绿色版 dsh-pet 桌宠；
+- 底模来自 `dsh-pet 0.3.8`（MIT，https://github.com/PC2005-cloud/dsh-pet），通过本地 `/pet/assets` 反代提供资源；
+- 蓝色头发/服装通过 CSS `hue-rotate(250deg)` 重映射为绿色，未修改原始视频；
+- 支持鼠标/触控拖拽，位置写入 localStorage；
+- 点击切换台词，右键菜单保留：打招呼、换动作、回右下角、隐藏桌宠；
+- 右下角可收起/重新打开。
 
 ### 模型配置（GLM-4.5-Flash）
 
@@ -188,8 +223,9 @@ data/demo_samples_v2.json    5 个真实演示样品（端口二默认/端口一
 data/llm_step_cache.json     工序展开缓存（在线 GLM 结果）
 kb/process_kb_v3.json        12 路线 + 8 风险规则
 kb/mining_areas.json         山西矿区清单
-kb/README.md                 知识库最终说明
 static/index.html           浅色平台首页
+static/auto.html|css|js     智能入口（自动分流）
+static/pet/                 绿色桌宠视频/样式/脚本
 static/assets/logo.png      新「研智配」Logo
 static/landing.css|js       首页样式与动态渲染
 static/vision.html          端口二 · 视觉粗筛
@@ -198,14 +234,14 @@ static/app.js               端口二逻辑
 static/precision.js         端口一逻辑
 static/styles.css           端口基础样式
 static/port-light.css       端口浅色皮肤
+budget_engine.py            公开市场区间预算模型
 tests/images/               3 张默认演示图
 scripts/train_models_v2.py  可复现训练脚本
 scripts/build_kb_v3.py      知识库生成脚本
 scripts/verify_ports.py     三端口自检
+一键运行.bat                 启动后端并打开首页
 三端口一键检验.bat           一键验收
-README.md                   本说明
-模型重训报告_2026-11.md       v2 模型报告
-答辩演示脚本.md              最终版演示流程与边界话术
+README.md                   唯一项目文档（本说明）
 config.example.json          GLM 配置模板（不含 Key）
 ```
 
@@ -240,4 +276,4 @@ https://github.com/liuzy0543-spec/coal-gangue-demo
 
 ## 9. 版本
 
-当前为最终交付版：浅色首页 + 三端口 + v2 模型 + R01~R12 知识库 + GLM 工序展开 + 一键验收。
+当前为最终交付版：浅色首页 + 智能入口 + 三端口 + v2 模型 + R01~R12 知识库 + GLM 工序展开 + 分步预算 + 绿色桌宠 + 一键运行/验收。

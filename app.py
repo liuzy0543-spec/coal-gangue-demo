@@ -67,6 +67,7 @@ PRECISION_DEMO_IMAGES = [
 CONFIG_PATH = ROOT / "config.json"
 
 from kb_engine_v3 import recommend as kb_recommend, load_kb as load_kb_v3, ratios as kb_ratios
+from budget_engine import build_budget
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024
@@ -1367,6 +1368,17 @@ def report_page():
     return send_from_directory(str(ROOT / "static"), "precision.html")
 
 
+@app.route("/auto")
+def auto_page():
+    return send_from_directory(str(ROOT / "static"), "auto.html")
+
+
+@app.route("/pet/assets/<path:sub>")
+def pet_assets(sub):
+    """Local reverse-proxy surface for the green dsh-pet widget assets."""
+    return send_from_directory(str(ROOT / "static" / "pet"), sub, conditional=True)
+
+
 @app.route("/api/precision/template")
 def api_precision_template():
     doc = load_json(DEMO_SAMPLES_V2_PATH, {}) or {}
@@ -1434,6 +1446,8 @@ def api_precision_batch():
             shaped["similar_cases"] = find_similar_cases(values, shaped["primary"].get("route_code", ""), 3)
             shaped["values"] = {k: v for k, v in values.items() if k != "_codes"}
             shaped["requirements_echo"] = req
+            shaped["budget"] = build_budget(shaped.get("primary", {}).get("process_chain") or [],
+                                            shaped.get("primary", {}), values)
             results.append(shaped)
             if use_llm:
                 jobs.append((len(results) - 1, values, shaped, req))
@@ -1564,6 +1578,9 @@ def home_payload() -> Dict:
             {"id": "report", "name": "端口三 · 实验报告端", "href": "/report",
              "desc": "跳过图像识别，直接从实验报告填写开始，适合已有 XRF / XRD / 工业分析数据。",
              "accent": "teal"},
+            {"id": "auto", "name": "智能入口 · 自动分流", "href": "/auto",
+             "desc": "上传图片或填写化验数据，平台自动判断应进入哪个端口。",
+             "accent": "auto"},
         ],
         "workflow": [
             {"no": "1", "title": "上传数据 / 图像", "desc": "上传化验数据或煤矸石图像"},
@@ -1590,7 +1607,7 @@ def api_health():
                     "kb_count": len(kb.get("entries", [])),
                     "kb_version": kb.get("version", ""),
                     "yolo_ready": app_state.get("model") is not None,
-                    "ports": {"home": "/", "port1": "/precision", "port2": "/vision", "port3": "/report", "api": "/api"}})
+                    "ports": {"home": "/", "auto": "/auto", "port1": "/precision", "port2": "/vision", "port3": "/report", "api": "/api"}})
 
 
 @app.route("/api/meta")
@@ -1677,6 +1694,36 @@ def api_examples():
     return jsonify({"ok": True, "items": items})
 
 
+AUTO_IMG_EXTS = {"jpg", "jpeg", "png", "bmp", "webp", "tif", "tiff"}
+
+
+@app.route("/api/auto/intake", methods=["POST"])
+def api_auto_intake():
+    """Save an optional image from the unified entry and echo structured lab data."""
+    try:
+        values = {}
+        raw = request.form.get("values")
+        if raw:
+            try:
+                values = json.loads(raw)
+            except Exception:
+                values = {}
+        image_path = ""
+        f = request.files.get("file")
+        if f and f.filename:
+            ext = (Path(f.filename).suffix or "").lower().lstrip(".")
+            if ext not in AUTO_IMG_EXTS:
+                return jsonify({"ok": False, "error": "不支持的图片格式"}), 400
+            name = f"intake_{int(time.time())}_{uuid.uuid4().hex[:8]}.{ext}"
+            dst = UPLOADS / name
+            f.save(str(dst))
+            image_path = f"outputs/uploads/{name}"
+        return jsonify({"ok": True, "image_path": image_path, "values": values})
+    except Exception as exc:
+        traceback.print_exc()
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 @app.route("/api/detect", methods=["POST"])
 def api_detect():
     try:
@@ -1736,6 +1783,9 @@ def api_recommend():
     try:
         time.sleep(2)
         result = recommend_stones_v3(stones, area, inputs, requirements)
+        for r in result.get("stones", []):
+            r["budget"] = build_budget(r.get("primary", {}).get("process_chain") or [],
+                                       r.get("primary", {}), {})
         cfg = get_llm_config()
         override = data.get("llm") or {}
         if override.get("api_key"):

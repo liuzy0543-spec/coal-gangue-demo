@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智能入口 · 自动分流 · 煤矸石智能匹配平台</title>
+<link rel="icon" href="/static/assets/logo.png">
+<link rel="stylesheet" href="/static/landing.css">
+<link rel="stylesheet" href="/static/auto.css">
+</head>
+<body class="auto-page">
+<div class="page">
+  <header class="site-header">
+    <div class="topbar">
+      <a class="brand" href="/"><img class="brand-logo" src="/static/assets/logo.png" alt="研智配 · 煤矸石资源化利用智能匹配平台"></a>
+      <nav class="main-nav">
+        <a href="/">首页</a>
+        <a class="active" href="/auto">智能入口</a>
+        <a href="/precision">精准匹配</a>
+        <a href="/vision">视觉粗筛</a>
+        <a href="/report">实验报告</a>
+      </nav>
+      <div class="top-actions">
+        <a class="status-link" href="/api/health" target="_blank"><i class="status-dot"></i><span>服务在线</span></a>
+        <a class="user-chip" href="/" style="text-decoration:none"><span class="avatar">研</span><span>返回首页</span></a>
+      </div>
+    </div>
+  </header>
+
+  <main class="auto-main">
+    <section class="auto-hero">
+      <div>
+        <div class="eyebrow"><span></span>ONE ENTRY · AUTO ROUTING</div>
+        <h1>不用先选端口<br><em>让平台判断怎么处理</em></h1>
+        <p>有现场照片就走视觉粗筛；有图片和化验单就走实验报告匹配；只有化验数据就直接进入实验报告端。上传或填写后，平台给出分流依据并自动打开对应端口。</p>
+      </div>
+      <div class="route-map" aria-hidden="true">
+        <div class="route-node input"><b>输入</b><span>图片 / 化验数据</span></div>
+        <div class="route-line"><i></i><i></i><i></i></div>
+        <div class="route-branches">
+          <div><b>图片 + 无化验</b><span>端口二</span></div>
+          <div><b>图片 + 化验</b><span>端口一</span></div>
+          <div><b>只有化验</b><span>端口三</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="auto-mode">
+      <div class="auto-mode-head"><div><b>选择目标端口 <em>*</em></b><span>三选一；至少填写该端口要求的数据后，才能进入下一步。</span></div><span class="auto-required">必选</span></div>
+      <div class="auto-modes" id="auto-modes">
+        <button type="button" class="auto-mode-btn" data-target="precision"><b>端口一</b><span>图片 + 化验数据</span><small>识别石头 + 实验报告</small></button>
+        <button type="button" class="auto-mode-btn" data-target="vision"><b>端口二</b><span>现场图片</span><small>视觉粗筛 + 成分预测</small></button>
+        <button type="button" class="auto-mode-btn" data-target="report"><b>端口三</b><span>化验数据</span><small>跳过图片，直接报告</small></button>
+      </div>
+    </section>
+
+    <div class="auto-grid">
+      <section class="auto-card">
+        <div class="auto-card-head"><span class="auto-no">01</span><div><h2>现场图片</h2><p>可选。有图片时优先使用视觉识别。</p></div><span class="optional">OPTIONAL</span></div>
+        <div class="auto-drop" id="auto-drop">
+          <input type="file" id="auto-file" accept=".jpg,.jpeg,.png,.bmp,.webp,.tif,.tiff,image/*" hidden>
+          <div class="auto-drop-icon">🖼️</div>
+          <b>拖入 / 点击上传图片</b>
+          <small>JPG / PNG / BMP / WEBP / TIF · 支持现场照片</small>
+          <img id="auto-preview" alt="待识别图片">
+          <button type="button" class="auto-clear" id="auto-clear">重新选择</button>
+        </div>
+      </section>
+
+      <section class="auto-card">
+        <div class="auto-card-head"><span class="auto-no">02</span><div><h2>已有化验数据</h2><p>可选。填主要指标即可，空项由库内默认值补齐。</p></div><button type="button" class="auto-sample" id="auto-sample">载入示例</button></div>
+        <div class="auto-fields">
+          <label><span>SiO₂ (%)</span><input id="ai-SiO2" type="number" step="0.01" placeholder="如 48.5"></label>
+          <label><span>Al₂O₃ (%)</span><input id="ai-Al2O3" type="number" step="0.01" placeholder="如 24.2"></label>
+          <label><span>Fe₂O₃ (%)</span><input id="ai-Fe2O3" type="number" step="0.01" placeholder="如 5.8"></label>
+          <label><span>CaO (%)</span><input id="ai-CaO" type="number" step="0.01" placeholder="如 2.8"></label>
+          <label><span>LOI (%)</span><input id="ai-LOI" type="number" step="0.01" placeholder="如 12.35"></label>
+          <label><span>灰分 Aad (%)</span><input id="ai-ash" type="number" step="0.1" placeholder="如 59.68"></label>
+          <label><span>全硫 St (%)</span><input id="ai-St" type="number" step="0.01" placeholder="如 1.45"></label>
+          <label><span>发热量 Qnet (MJ/kg)</span><input id="ai-Qnet" type="number" step="0.01" placeholder="如 10.61"></label>
+          <label><span>浸出液 pH</span><input id="ai-pH" type="number" step="0.1" placeholder="如 7.2"></label>
+          <label class="wide"><span>省 / 市 / 煤田（可选）</span><input id="ai-place" placeholder="如 山西 / 晋城市 / 沁水煤田"></label>
+        </div>
+      </section>
+    </div>
+
+    <section class="auto-demo-tools" id="auto-demo-tools">
+      <div class="auto-demo-head"><b>演示数据</b><span>仅用于 demo / 测试；后续验收时可整块删除。</span></div>
+      <div class="auto-demo-buttons">
+        <button type="button" data-demo="precision">一键填写端口一</button>
+        <button type="button" data-demo="vision">一键填写端口二</button>
+        <button type="button" data-demo="report">一键填写端口三</button>
+      </div>
+    </section>
+
+    <section class="auto-submit">
+      <div>
+        <b>自动判断规则</b>
+        <span id="auto-hint">至少上传图片，或填写 3 项以上主要化验指标。</span>
+      </div>
+      <button type="button" class="auto-go" id="auto-go">开始智能匹配 <span>→</span></button>
+    </section>
+
+    <section class="auto-decision" id="auto-decision">
+      <div class="decision-icon" id="decision-icon">✦</div>
+      <div class="decision-copy">
+        <span class="decision-kicker">AUTO ROUTING RESULT</span>
+        <h2 id="decision-title">等待输入</h2>
+        <p id="decision-desc">上传图片或填写化验数据后，这里会显示分流判断。</p>
+        <div class="decision-tags" id="decision-tags"></div>
+      </div>
+      <div class="decision-target"><span>目标端口</span><b id="decision-port">—</b><em id="decision-count">—</em></div>
+    </section>
+
+    <div class="auto-note">
+      <span>ⓘ</span><span>自动分流只决定入口，不改变三个端口原有的模型与知识库规则。图片与化验数据只保存在本机运行目录，不会上传到外部服务器（GLM 工序展开除外）。</span>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-brand"><b>研智配</b><span>煤矸石资源化利用智能匹配平台</span></div>
+    <div class="footer-links"><a href="/">首页</a><a href="/precision">端口一</a><a href="/vision">端口二</a><a href="/report">端口三</a></div>
+  </footer>
+</div>
+<div class="auto-guard" id="auto-guard" role="dialog" aria-modal="true" aria-labelledby="guard-title">
+  <div class="auto-guard-card">
+    <div class="guard-icon">!</div>
+    <h3 id="guard-title">还不能进入下一步</h3>
+    <p id="guard-text">请先选择目标端口，并填写该端口要求的数据。</p>
+    <button type="button" id="guard-close">知道了</button>
+  </div>
+</div>
+<script src="/static/auto.js"></script>
+</body>
+</html>

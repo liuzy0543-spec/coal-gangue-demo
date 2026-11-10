@@ -601,3 +601,47 @@ td.num, th.num { font-family: var(--mono); text-align: right; }
 .step3-stack #rec-result .flow-svg { width:100%; max-width:none; }
 .step3-stack #rec-result .plan-list { gap:18px; }
 @media (max-width:760px) { .step3-stack { gap:14px; } }
+/* ===== budget estimate ===== */
+.budget-block{border:1px solid rgba(56,189,248,.22);border-radius:13px;padding:13px 14px;background:linear-gradient(135deg,rgba(56,189,248,.06),rgba(34,197,94,.045));}
+.budget-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.budget-head h4{margin:0!important;font-size:12px!important;color:#7dd3fc!important;letter-spacing:.3px}
+.budget-total{text-align:right;line-height:1.15}
+.budget-total span{display:block;font-size:9px;color:var(--dim);letter-spacing:.5px}
+.budget-total b{font-family:var(--mono);font-size:22px;color:#fbbf24;letter-spacing:-.5px}
+.budget-total em{font-style:normal;font-size:10px;color:var(--muted);margin-left:3px}
+.budget-scale{font-size:9.5px;color:var(--dim);margin:3px 0 9px}
+.budget-table-wrap{border-radius:9px;max-height:380px;overflow:auto}
+.budget-table{font-size:10.5px}
+.budget-table th{padding:6px 8px;font-size:9.5px}
+.budget-table td{padding:6px 8px;color:var(--muted)}
+.budget-table td.mono{color:#fbbf24;white-space:nowrap;font-size:10.5px}
+.budget-table td:nth-child(2){text-align:right;white-space:nowrap}
+.budget-table .bud-step b{display:inline-block;min-width:20px;color:#7dd3fc;font-family:var(--mono);font-size:9px;margin-right:5px}
+.budget-rollup{display:flex;flex-wrap:wrap;gap:6px 13px;margin-top:9px;padding-top:8px;border-top:1px dashed rgba(148,163,184,.22);font-size:10px;color:var(--muted)}
+.budget-rollup b{color:var(--ink);font-family:var(--mono);font-size:10px}
+.budget-rollup .budget-sum{margin-left:auto;color:#fbbf24}
+.budget-rollup .budget-sum b{color:#fbbf24;font-size:12px}
+.budget-note{font-size:9px;color:var(--dim);line-height:1.7;margin-top:7px}
+.budget-sources{margin-top:7px;font-size:9px;color:var(--dim)}
+.budget-sources summary{cursor:pointer;color:#7dd3fc;font-size:9.5px}
+.budget-sources ul{margin:6px 0 3px;padding-left:15px;line-height:1.6}
+.budget-sources a{display:block;color:#7dd3fc;text-decoration:none;margin-top:3px;line-height:1.55}
+.budget-sources a:hover{text-decoration:underline}
+body.port-light .budget-block{background:linear-gradient(135deg,#edf9ff,#eefaf4);border-color:#cbe5e8}
+body.port-light .budget-head h4{color:#0b63ce!important}
+body.port-light .budget-total b{color:#b07718}
+body.port-light .budget-total span,body.port-light .budget-scale,body.port-light .budget-note,body.port-light .budget-sources{color:#8ba1aa}
+body.port-light .budget-table td{color:#5f7b89;border-bottom-color:#e8f2f4}
+body.port-light .budget-table th{background:#eef8fa;color:#6d8996}
+body.port-light .budget-table td.mono{color:#a56e12}
+body.port-light .budget-table .bud-step b{color:#0b63ce}
+body.port-light .budget-rollup{color:#6f8b95;border-top-color:#dbe9ec}
+body.port-light .budget-rollup b{color:#244d5f}
+body.port-light .budget-rollup .budget-sum{color:#a56e12}
+body.port-light .budget-rollup .budget-sum b{color:#a56e12}
+body.port-light .budget-sources summary,body.port-light .budget-sources a{color:#0b63ce}
+/* keep step navigation available while reviewing long plans */
+.p1-stepbar{position:sticky;top:8px;z-index:28;background:rgba(244,250,251,.88);backdrop-filter:blur(12px);padding:5px;border-radius:12px;box-shadow:0 4px 14px rgba(26,84,103,.05)}
+.stepper{position:sticky;top:8px;z-index:26;background:rgba(10,16,25,.72);backdrop-filter:blur(12px);padding:5px;border-radius:14px}
+body.port-light .stepper{background:rgba(244,250,251,.88);box-shadow:0 4px 14px rgba(26,84,103,.05)}
+@media(max-width:760px){.p1-stepbar,.stepper{top:4px}.stepper{padding:4px}}

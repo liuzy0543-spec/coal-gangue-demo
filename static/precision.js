@@ -457,9 +457,10 @@ function detailText(d, chainStep) {
   }
   return t;
 }
-function flowSVG(chain, code, details) {
+function flowSVG(chain, code, details, budget) {
   const steps = chain || [];
   const dlist = (details || []).map((d, i) => detailText(d, steps[i]));
+  const costs = new Map(((budget && budget.steps) || []).map((x) => [x.step, x]));
   const nodes = ["原矸 / 实验指标", ...steps, "产品 / 去向"];
   const cols = 5, rows = Math.ceil(nodes.length / cols);
   const bw = 188, bh = 108, gapX = 20, gapY = 42, x0 = 24, y0 = 28;
@@ -496,6 +497,10 @@ function flowSVG(chain, code, details) {
     svg += `<g><title>${escX(label + "：" + detail)}</title>`;
     svg += `<rect x="${p.x}" y="${p.y}" width="${bw}" height="${bh}" rx="9" fill="${fill}" stroke="${stroke}"/>`;
     svg += `<text x="${p.x + 10}" y="${p.y + 16}" fill="${isStart || isEnd ? "#86efac" : "#7dd3fc"}" font-size="9" font-family="monospace">${String(i).padStart(2, "0")} ${isStart ? "INPUT" : isEnd ? "OUTPUT" : "STEP"}</text>`;
+    if (!isStart && !isEnd && costs.get(label)) {
+      const c = costs.get(label);
+      svg += `<text x="${p.x + bw - 8}" y="${p.y + 16}" text-anchor="end" fill="#fbbf24" font-size="7.5" font-family="monospace">${c.low}–${c.high}万</text>`;
+    }
     wrapText(label, 9).slice(0, 2).forEach((line, k) => {
       svg += `<text x="${p.x + 10}" y="${p.y + 32 + k * 12}" fill="#dbeafe" font-size="9.5" font-weight="600">${escX(line)}</text>`;
     });
@@ -506,6 +511,25 @@ function flowSVG(chain, code, details) {
   });
   svg += `</svg>`;
   return svg;
+}
+
+function budgetBlock(b) {
+  if (!b || !(b.steps || []).length) return "";
+  const rows = b.steps.map((x, i) => `<tr><td class="bud-step"><b>${String(i + 1).padStart(2, "0")}</b>${esc(x.step)}</td><td class="mono">${x.low}–${x.high}</td><td>${esc(x.scope || "")}</td></tr>`).join("");
+  const src = (b.sources || []).map((x) => `<a href="${esc(x.url)}" target="_blank" rel="noreferrer">${esc(x.label)}</a>`).join("");
+  return `<div class="result-block budget-block">
+    <div class="budget-head"><h4>投资概算 · 分步到总包</h4><div class="budget-total"><span>整套流程总预算</span><b>${b.total_low}–${b.total_high}</b><em>万元</em></div></div>
+    <div class="budget-scale">${esc(b.scale || "")} · 设备/工程/安装/预备费口径，非供应商报价</div>
+    <div class="table-wrap budget-table-wrap"><table class="budget-table"><thead><tr><th>工序</th><th>预算区间</th><th>包含范围</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="budget-rollup">
+      <span>设备 <b>${b.equipment_low}–${b.equipment_high}</b></span>
+      <span>工程安装 <b>${b.engineering_low}–${b.engineering_high}</b></span>
+      <span>预备费 <b>${b.contingency_low}–${b.contingency_high}</b></span>
+      <span class="budget-sum">合计 <b>${b.total_low}–${b.total_high}</b> 万元</span>
+    </div>
+    <div class="budget-note">${esc(b.basis || "")}</div>
+    <details class="budget-sources"><summary>预算依据与市场来源</summary><ul>${(b.assumptions || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul><div>${src}</div></details>
+  </div>`;
 }
 
 function planBlock(r, i) {
@@ -530,10 +554,11 @@ function planBlock(r, i) {
       <div class="plan-route">${esc(p.route_code || "")}<span>${esc(p.confidence || "中")}</span></div>
     </div>
     <div class="plan-meta"><span class="chip" style="padding:1px 7px;font-size:10px">${esc(p.category || "")}</span><span class="mono" style="font-size:10px;color:var(--dim)">${esc(p.standard || "")}</span><span class="mono" style="font-size:10px;color:var(--dim)">双击看指标</span></div>
-    <div class="result-block"><h4>数据流图 · 八工序</h4>${flowSVG(p.process_chain, p.route_code, details)}</div>
+    <div class="result-block"><h4>数据流图 · 八工序</h4>${flowSVG(p.process_chain, p.route_code, details, r.budget)}</div>
     ${detailHtml ? `<div class="result-block"><h4>工序展开</h4><div class="step-notes">${detailHtml}</div></div>` : ""}
     ${p.products ? `<div class="result-block"><h4>目标产品</h4><div class="plan-text">${esc(p.products)}</div></div>` : ""}
     <div class="result-block"><h4>关键参数</h4><div class="param-grid">${params}</div></div>
+    ${budgetBlock(r.budget)}
     <div class="result-block"><h4>路线要求</h4><ul class="req-list">${reqs}</ul></div>
     ${plan && plan.summary ? `<div class="result-block"><h4>处理方案</h4><div class="plan-text">${esc(plan.summary)}</div></div>` : ""}
     ${qc ? `<div class="result-block"><h4>质量控制</h4><ul class="req-list">${qc}</ul></div>` : ""}
@@ -679,6 +704,43 @@ function resetReportMode() {
   showStep(2);
 }
 
+/* ---------------- 统一入口带入的数据 ---------------- */
+function readIntake() {
+  if (!new URLSearchParams(location.search).has("intake")) return null;
+  try {
+    const d = JSON.parse(localStorage.getItem("yzb_intake") || "null");
+    if (d) localStorage.removeItem("yzb_intake");
+    return d;
+  } catch (e) { return null; }
+}
+function applyIntakeValues(f, values) {
+  if (!f || !values) return;
+  const d = f.data;
+  ["SiO2", "Al2O3", "Fe2O3", "CaO", "MgO", "SO3", "K2O", "Na2O", "LOI"].forEach((k) => {
+    if (values[k] != null && values[k] !== "") d.chemical[k] = Number(values[k]);
+  });
+  ["ash", "volatile", "FC", "St", "Qnet"].forEach((k) => {
+    if (values[k] != null && values[k] !== "") d.industrial[k] = Number(values[k]);
+  });
+  if (values.pH != null && values.pH !== "") d.environment.pH = Number(values.pH);
+  ["province", "city", "coalfield"].forEach((k) => {
+    if (values[k]) d.meta[k] = values[k];
+  });
+}
+async function applyAutoIntake() {
+  const intake = readIntake();
+  if (!intake) return;
+  if (intake.imagePath) {
+    await loadDemoImage(intake.imagePath);
+  }
+  if (!P.forms.length) return;
+  applyIntakeValues(P.forms[0], intake.values || {});
+  P.idx = 0; P.module = 0;
+  fillForm(0, 0);
+  showStep(2);
+  toast("已从智能入口带入数据，请核对后继续", "ok");
+}
+
 /* ---------------- 初始化 ---------------- */
 async function init() {
   try {
@@ -701,6 +763,7 @@ async function init() {
     renderLLMChip();
     fillConfig();
     if (IS_REPORT) setupReportMode();
+    await applyAutoIntake();
   } catch (e) {
     toast("模板加载失败：" + e.message, "err");
   }

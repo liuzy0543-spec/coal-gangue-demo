@@ -12,9 +12,9 @@
       "detail": "records=635 routes=8 cases=4"
     },
     {
-      "name": "端口三实验报告页",
+      "name": "智能入口与桌宠",
       "ok": true,
-      "detail": "/report 可直接访问"
+      "detail": "/auto + /pet/assets 可直接访问"
     },
     {
       "name": "端口二图像识别",
@@ -78,6 +78,7 @@
     "ok": true,
     "ports": {
       "api": "/api",
+      "auto": "/auto",
       "home": "/",
       "port1": "/precision",
       "port2": "/vision",

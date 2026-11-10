@@ -94,6 +94,19 @@ async function init() {
   renderStoneInputs();
   $("#rule-note").textContent = "";
   markDone(1, false);
+  await applyVisionIntake();
+}
+
+async function applyVisionIntake() {
+  if (!new URLSearchParams(location.search).has("intake")) return;
+  let intake = null;
+  try {
+    intake = JSON.parse(localStorage.getItem("yzb_intake") || "null");
+    localStorage.removeItem("yzb_intake");
+  } catch (e) { return; }
+  if (!intake || !intake.imagePath) return;
+  toast("智能入口已选择视觉粗筛，正在载入图片…", "ok");
+  await detectByPath(intake.imagePath);
 }
 
 function renderLLMChip(llm) {
@@ -835,9 +848,10 @@ function p2Wrap(text, width = 9) {
   for (let i = 0; i < s.length; i += width) out.push(s.slice(i, i + width));
   return out.slice(0, 3);
 }
-function p2FlowSVG(chain, code, details) {
+function p2FlowSVG(chain, code, details, budget) {
   const steps = chain || [];
   const dlist = (details || []).map((d, i) => p2DetailText(d, steps[i]));
+  const costs = new Map(((budget && budget.steps) || []).map((x) => [x.step, x]));
   const nodes = ["原矸 / 预测指标", ...steps, "产品 / 去向"];
   const cols = 5, rows = Math.ceil(nodes.length / cols);
   const bw = 188, bh = 108, gapX = 20, gapY = 42, x0 = 24, y0 = 28;
@@ -869,6 +883,10 @@ function p2FlowSVG(chain, code, details) {
     const stroke = start || finish ? "rgba(74,222,128,.55)" : "rgba(125,211,252,.4)";
     svg += `<g><title>${ex(label + "：" + detail)}</title><rect x="${q.x}" y="${q.y}" width="${bw}" height="${bh}" rx="9" fill="${fill}" stroke="${stroke}"/>`;
     svg += `<text x="${q.x + 10}" y="${q.y + 16}" fill="${start || finish ? "#86efac" : "#7dd3fc"}" font-size="9" font-family="monospace">${String(i).padStart(2, "0")} ${start ? "INPUT" : finish ? "OUTPUT" : "STEP"}</text>`;
+    if (!start && !finish && costs.get(label)) {
+      const c = costs.get(label);
+      svg += `<text x="${q.x + bw - 8}" y="${q.y + 16}" text-anchor="end" fill="#fbbf24" font-size="7.5" font-family="monospace">${c.low}–${c.high}万</text>`;
+    }
     p2Wrap(label, 9).slice(0, 2).forEach((line, k) => {
       svg += `<text x="${q.x + 10}" y="${q.y + 32 + k * 12}" fill="#dbeafe" font-size="9.5" font-weight="600">${ex(line)}</text>`;
     });
@@ -878,6 +896,25 @@ function p2FlowSVG(chain, code, details) {
     svg += `</g>`;
   });
   return svg + `</svg>`;
+}
+
+function budgetBlock(b) {
+  if (!b || !(b.steps || []).length) return "";
+  const rows = b.steps.map((x, i) => `<tr><td class="bud-step"><b>${String(i + 1).padStart(2, "0")}</b>${esc(x.step)}</td><td class="mono">${x.low}–${x.high}</td><td>${esc(x.scope || "")}</td></tr>`).join("");
+  const src = (b.sources || []).map((x) => `<a href="${esc(x.url)}" target="_blank" rel="noreferrer">${esc(x.label)}</a>`).join("");
+  return `<div class="result-block budget-block">
+    <div class="budget-head"><h4>投资概算 · 分步到总包</h4><div class="budget-total"><span>整套流程总预算</span><b>${b.total_low}–${b.total_high}</b><em>万元</em></div></div>
+    <div class="budget-scale">${esc(b.scale || "")} · 设备/工程/安装/预备费口径，非供应商报价</div>
+    <div class="table-wrap budget-table-wrap"><table class="budget-table"><thead><tr><th>工序</th><th>预算区间</th><th>包含范围</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="budget-rollup">
+      <span>设备 <b>${b.equipment_low}–${b.equipment_high}</b></span>
+      <span>工程安装 <b>${b.engineering_low}–${b.engineering_high}</b></span>
+      <span>预备费 <b>${b.contingency_low}–${b.contingency_high}</b></span>
+      <span class="budget-sum">合计 <b>${b.total_low}–${b.total_high}</b> 万元</span>
+    </div>
+    <div class="budget-note">${esc(b.basis || "")}</div>
+    <details class="budget-sources"><summary>预算依据与市场来源</summary><ul>${(b.assumptions || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul><div>${src}</div></details>
+  </div>`;
 }
 
 function renderRecommend(d) {
@@ -905,10 +942,11 @@ function renderRecommend(d) {
         <div class="plan-route">${esc(p.route_code || "")}<span>${esc(p.confidence || "中")}</span></div>
       </div>
       <div class="plan-meta"><span class="chip" style="padding:1px 7px;font-size:10px">${esc(p.category || "")}</span><span class="mono" style="font-size:10px;color:var(--dim)">${esc(p.standard || "")}</span></div>
-      <div class="result-block"><h4>数据流图 · 八工序</h4>${p2FlowSVG(chain, p.route_code, details)}</div>
+      <div class="result-block"><h4>数据流图 · 八工序</h4>${p2FlowSVG(chain, p.route_code, details, r.budget)}</div>
       ${stepNotes ? `<div class="result-block"><h4>工序展开</h4><div class="step-notes">${stepNotes}</div></div>` : ""}
       ${p.products ? `<div class="result-block"><h4>目标产品</h4><div class="plan-text">${esc(p.products)}</div></div>` : ""}
       <div class="result-block"><h4>关键参数</h4><div class="param-grid">${params}</div></div>
+      ${budgetBlock(r.budget)}
       <div class="result-block"><h4>路线要求</h4><ul class="req-list">${reqs}</ul></div>
       ${risks}
       <div class="result-block"><h4>必须补检</h4><div class="sub-list">${tests}</div></div>
